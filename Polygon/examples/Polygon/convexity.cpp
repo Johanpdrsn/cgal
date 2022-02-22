@@ -9,6 +9,7 @@
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Arr_naive_point_location.h>
+
 using namespace std;
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
@@ -30,8 +31,8 @@ typedef Arrangement_2::Edge_const_iterator Edge_const_iterator;
 typedef CGAL::Simple_polygon_visibility_2<Arrangement_2, CGAL::Tag_false> NSPV;
 
 
-# define nice(os) ((os == CGAL::ON_ORIENTED_BOUNDARY) ? "on boundary" :  \
-                   (os == CGAL::NEGATIVE) ? "inside" : "outside")
+# define nice(os) (((os) == CGAL::ON_ORIENTED_BOUNDARY) ? "on boundary" :  \
+                   ((os) == CGAL::NEGATIVE) ? "inside" : "outside")
 
 
 unsigned long triangle_index_search(double sample, std::vector<double> cdf) {
@@ -124,15 +125,7 @@ std::vector<CGAL::Triangle_2<K>> triangulate(Polygon_2 &poly) {
 }
 
 
-int main() {
-    CGAL::IO::set_pretty_mode(std::cout);
-
-    Polygon_2 polygon;
-    polygon.push_back(Point_T_2(0, 0));
-    polygon.push_back(Point_T_2(0, 3));
-    polygon.push_back(Point_T_2(1, 1));
-    polygon.push_back(Point_T_2(3, 0));
-
+unsigned int visibility_sample(Polygon_2 polygon) {
     std::vector<CGAL::Triangle_2<K>> triangles = triangulate(polygon);
 
     for (auto tri: triangles) {
@@ -188,34 +181,60 @@ int main() {
     // The query point locates in the interior of a face
     face = boost::get<Arrangement_2::Face_const_handle>(&obj);
 
-    // compute non regularized visibility area
-    // Define visibility object type that computes non-regularized visibility area
+    // compute non regularized visibility_sample area
+    // Define visibility object type that computes non-regularized visibility_sample area
     Arrangement_2 non_regular_output;
     NSPV non_regular_visibility(env);
     non_regular_visibility.compute_visibility(point_sample, *face, non_regular_output);
-    std::cout << "Non-regularized visibility region of q has "
-              << non_regular_output.number_of_edges()
-              << " edges:" << std::endl;
-    for (Edge_const_iterator eit = non_regular_output.edges_begin(); eit != non_regular_output.edges_end(); ++eit)
-        std::cout << "[" << eit->source()->point() << " -> " << eit->target()->point() << "]" << std::endl;
+//    std::cout << "Non-regularized visibility_sample region of q has "
+//              << non_regular_output.number_of_edges()
+//              << " edges:" << std::endl;
+//    for (Edge_const_iterator eit = non_regular_output.edges_begin(); eit != non_regular_output.edges_end(); ++eit)
+//        std::cout << "[" << eit->source()->point() << " -> " << eit->target()->point() << "]" << std::endl;
 
     CGAL::Polygon_2<Kernel> vis;
 
 
-    for(auto var : non_regular_output.vertex_handles()){
+    for (auto var: non_regular_output.vertex_handles()) {
         vis.push_back(var->point());
     }
 
 
     auto os = vis.oriented_side(point_sample2);
 
-    cout << vis << endl;
-    for (auto it = vis.edges_begin(); it != vis.edges_end(); ++it){
-        cout << it->point(0) << "->" << it->point(1) << endl;
-    }
-    cout << point_sample << " : " << point_sample2 << endl;
-    cout << nice(os) << endl;
 
+//    cout << vis << endl;
+//    for (auto it = vis.edges_begin(); it != vis.edges_end(); ++it) {
+//        cout << it->point(0) << "->" << it->point(1) << endl;
+//    }
+//    cout << point_sample << " : " << point_sample2 << endl;
+//    cout << nice(os) << endl;
+
+    return os == CGAL::ON_POSITIVE_SIDE ? 0 : 1;
+}
+
+
+double simulate(int n) {
+    Polygon_2 polygon;
+    polygon.push_back(Point_T_2(0, 0));
+    polygon.push_back(Point_T_2(0, 3));
+    polygon.push_back(Point_T_2(1, 1));
+    polygon.push_back(Point_T_2(3, 0));
+
+    double sum = 0;
+
+    for (int i = 0; i < n; i++) {
+        sum += visibility_sample(polygon);
+    }
+
+    return sum / n;
+}
+
+
+int main() {
+    CGAL::IO::set_pretty_mode(std::cout);
+
+    cout << "Prob: " << simulate(10000) << endl;
 
     return 0;
 }
