@@ -22,7 +22,7 @@ typedef Kernel::Segment_2 Segment_2;
 typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
 typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
 
-typedef CGAL::Simple_polygon_visibility_2<Arrangement_2, CGAL::Tag_false> NSPV;
+typedef CGAL::Simple_polygon_visibility_2<Arrangement_2, CGAL::Tag_true> RSPV;
 
 
 unsigned long triangle_index_search(double sample, std::vector<double> &cdf) {
@@ -40,28 +40,6 @@ unsigned long triangle_index_search(double sample, std::vector<double> &cdf) {
         }
     }
     return -1;
-}
-
-Point_2 sample_triangle_point(CGAL::Triangle_2<Kernel> &t) {
-
-    random_device rand;
-    mt19937 generator(rand());
-    uniform_real_distribution<double> distribution(0, 1);
-
-    double a = distribution(generator);
-    double b = distribution(generator);
-
-    Point_2 v1 = Point_2(0, 3);
-    Point_2 v2 = Point_2(1, 1);
-
-    auto res = Point_2{(v1.x() + v2.x()) * a, (v1.y() + v2.y()) * b};
-    while (!t.bounded_side(res)) {
-        a = distribution(generator);
-        b = distribution(generator);
-        res = Point_2{(v1.x() + v2.x()) * a, (v1.y() + v2.y()) * b};
-    }
-
-    return res;
 }
 
 Point_2 kraemer_method(CGAL::Triangle_2<Kernel> &T) {
@@ -124,10 +102,8 @@ std::vector<double> compute_prefix_sum(std::vector<CGAL::Triangle_2<Kernel>> &tr
 }
 
 
-unsigned int two_point_visibility_sample(Polygon_2 &polygon) {
-    std::vector<CGAL::Triangle_2<Kernel>> triangles = triangulate(polygon);
-
-    std::vector<double> area_prefix_sum = compute_prefix_sum(triangles);
+unsigned int two_point_visibility_sample(Polygon_2 &polygon, std::vector<CGAL::Triangle_2<Kernel>> &triangles,
+                                         std::vector<double> &area_prefix_sum) {
 
     random_device rand;
     mt19937 generator(rand());
@@ -141,15 +117,6 @@ unsigned int two_point_visibility_sample(Polygon_2 &polygon) {
 
     CGAL::Triangle_2<Kernel> triangle1 = triangles[triangle_index1];
     CGAL::Triangle_2<Kernel> triangle2 = triangles[triangle_index2];
-
-    vector<Segment_2> p;
-
-    for (auto it = polygon.vertex_pairs_begin(); it != polygon.vertex_pairs_end(); ++it) {
-        auto x = Point_2(it->first.get().x(), it->first.get().y());
-        auto y = Point_2(it->second.get().x(), it->second.get().y());
-
-        p.emplace_back(Segment_2(x, y));
-    }
 
     Point_2 point_sample = triSample(triangle1);
     Point_2 point_sample2 = triSample(triangle2);
@@ -165,11 +132,8 @@ unsigned int two_point_visibility_sample(Polygon_2 &polygon) {
     return 1;
 }
 
-double visibility_polygon_sample(Polygon_2 &polygon) {
-
-    std::vector<CGAL::Triangle_2<Kernel>> triangles = triangulate(polygon);
-
-    std::vector<double> area_prefix_sum = compute_prefix_sum(triangles);
+double visibility_polygon_sample(Polygon_2 &polygon, std::vector<CGAL::Triangle_2<Kernel>> &triangles,
+                                 std::vector<double> &area_prefix_sum) {
 
     random_device rand;
     mt19937 generator(rand());
@@ -187,14 +151,11 @@ double visibility_polygon_sample(Polygon_2 &polygon) {
 
     vector<Segment_2> p;
 
-    for (auto it = polygon.vertex_pairs_begin(); it != polygon.vertex_pairs_end(); ++it) {
-        auto x = Point_2(it->first.get().x(), it->first.get().y());
-        auto y = Point_2(it->second.get().x(), it->second.get().y());
-
-        p.emplace_back(Segment_2(x, y));
+    for (auto it = polygon.edges_begin(); it != polygon.edges_end(); ++it) {
+        p.emplace_back(Segment_2(it->point(0), it->point(1)));
     }
 
-    Point_2 point_sample = triSample(triangle1);
+    Point_2 point_sample = kraemer_method(triangle1);
 
     Arrangement_2 env;
     CGAL::insert_non_intersecting_curves(env, p.begin(), p.end());
@@ -208,13 +169,12 @@ double visibility_polygon_sample(Polygon_2 &polygon) {
 
     // compute non regularized visibility_sample area
     // Define visibility object type that computes non-regularized visibility_sample area
-    Arrangement_2 non_regular_output;
-    NSPV non_regular_visibility(env);
-    non_regular_visibility.compute_visibility(point_sample, *face, non_regular_output);
+    Arrangement_2 regular_output;
+    RSPV regular_visibility(env);
+    regular_visibility.compute_visibility(point_sample, *face, regular_output);
 
     CGAL::Polygon_2<Kernel> vis;
-
-    for (auto var: non_regular_output.vertex_handles()) {
+    for (auto var: regular_output.vertex_handles()) {
         vis.push_back(var->point());
     }
 
@@ -222,24 +182,28 @@ double visibility_polygon_sample(Polygon_2 &polygon) {
 }
 
 
-double simulate(int n, const function<unsigned int(Polygon_2 &)> &vis_func) {
+double simulate(int n, const function<unsigned int(Polygon_2 &, std::vector<CGAL::Triangle_2<Kernel>> &,
+                                                   std::vector<double> &)> &vis_func) {
     Polygon_2 polygon;
     polygon.push_back(Point_2(0, 0));
     polygon.push_back(Point_2(-2, -1));
     polygon.push_back(Point_2(1, -1));
     polygon.push_back(Point_2(1, 2));
 
+    std::vector<CGAL::Triangle_2<Kernel>> triangles = triangulate(polygon);
+    std::vector<double> area_prefix_sum = compute_prefix_sum(triangles);
+
     double sum = 0;
 
     for (int i = 0; i < n; i++) {
-        sum += vis_func(polygon);
+        sum += vis_func(polygon, triangles, area_prefix_sum);
     }
     return sum / n;
 }
 
 
 int main() {
-    int n = 10000;
+    int n = 1000;
 
     chrono::time_point<chrono::steady_clock, chrono::duration<double, milli>> t1;
     chrono::time_point<chrono::steady_clock, chrono::duration<double, milli>> t2;
@@ -257,5 +221,7 @@ int main() {
     t2 = std::chrono::high_resolution_clock::now();
     ms_double = t2 - t1;
     cout << "Two points prob: " << two_points << " in " << ms_double.count() << "ms" << endl;
+
+
     return 0;
 }
