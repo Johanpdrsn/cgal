@@ -145,7 +145,7 @@ Kernel::FT two_point_visibility_sample(const Polygon_2 &polygon,
         }
     }
 
-    return (1 - (sum / Kernel::FT{n})).exact();
+    return (1 - (sum / Kernel::FT{n}));
 }
 
 Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
@@ -204,7 +204,7 @@ Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
         }
     }
 
-    return (sum / (polygon.area() * n)).exact();
+    return (sum / (polygon.area() * n));
 }
 
 
@@ -215,12 +215,12 @@ Kernel::FT simulate(const std::function<Kernel::FT(
 
     Polygon_2 polygon;
 
-    polygon.push_back(Point_2{0, 0});
-    polygon.push_back(Point_2{-2.01, -1.01});
-    polygon.push_back(Point_2{1.01, -1.01});
-    polygon.push_back(Point_2{1.01, 2.01});
+//    polygon.push_back(Point_2{0, 0});
+//    polygon.push_back(Point_2{-2.01, -1.01});
+//    polygon.push_back(Point_2{1.01, -1.01});
+//    polygon.push_back(Point_2{1.01, 2.01});
 
-//    read_polygon(fileName, polygon);
+    read_polygon(fileName, polygon);
 
     std::vector<Triangle_2> triangles;
     triangulate(polygon, triangles);
@@ -231,7 +231,7 @@ Kernel::FT simulate(const std::function<Kernel::FT(
 
 
 int main() {
-    const int N = 100000;
+    const int N = 10000;
     const std::string fileName{"many.line"};
 
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>> t1;
