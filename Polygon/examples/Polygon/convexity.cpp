@@ -3,12 +3,8 @@
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Arr_naive_point_location.h>
 #include <CGAL/point_generators_2.h>
-#include <CGAL/Polygon_2_algorithms.h>
-#include <CGAL/Constrained_triangulation_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
-#include <CGAL/Cartesian.h>
 
-#include <fstream>
 #include <random>
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
@@ -245,7 +241,7 @@ Kernel::FT simulate(const std::function<Kernel::FT(
 
 
 int main() {
-    const Kernel::FT N = 100000;
+    const Kernel::FT N = 1000000;
     const std::string fileName{"many.line"};
 
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>> t1;
