@@ -13,6 +13,7 @@ typedef Kernel::Triangle_2 Triangle_2;
 typedef Kernel::Point_2 Point_2;
 typedef Kernel::Segment_2 Segment_2;
 
+const int RECURSION_DEPTH = 10000;
 
 struct FaceInfo2 {
     FaceInfo2() = default;
@@ -116,56 +117,40 @@ void read_polygon(const std::string &fileName, Polygon_2 &polygon) {
     in.close();
 }
 
-Point_2 kraemer_method(CGAL::Triangle_2<Kernel> &T) {
-
-    std::random_device rand;
-    std::mt19937 generator(rand());
-    std::uniform_real_distribution<double> distribution(0, 1);
-
-    double a = distribution(generator);
-    double b = distribution(generator);
-
-    double q = CGAL::abs(a - b);
-
-    double t = 0.5 * (a + b - q);
-    double u = 1 - 0.5 * (q + a + b);
-
-    return Point_2{q * T[0].x() + t * T[1].x() + u * T[2].x(), q * T[0].y() + t * T[1].y() + u * T[2].y()};
-}
-
-
 Kernel::FT two_point_visibility_sample(const Polygon_2 &polygon,
                                        CGAL::Random_points_in_triangles_2<Point_2> &triangle_point_generator,
-                                       const Kernel::FT &n) {
+                                       const int n) {
+
+//    Triangle_2 A3 = Triangle_2{Point_2{1, 2}, Point_2{0, 0}, Point_2{1, 0.5}};
+//        Triangle_2 A1a = Triangle_2{Point_2{1, 0.5}, Point_2{0, 0}, Point_2{1, -1}};
+//        Triangle_2 A1b = Triangle_2{Point_2{1, -1}, Point_2{0, 0}, Point_2{-0.5, -1}};
+//        Triangle_2 A2 = Triangle_2{Point_2{0, 0}, Point_2{-0.5, -1}, Point_2{-2, -1}};
+//    CGAL::Random_points_in_triangle_2<Point_2> test{A3};
 
     int sum = 0;
     Point_2 p1, p2;
     for (int i = 0; i < n; i++) {
+//        p1 = *test++;
+
         p1 = *triangle_point_generator++;
         p2 = *triangle_point_generator++;
 
-//        Triangle_2 A3 = Triangle_2{Point_2{1, 2}, Point_2{0, 0}, Point_2{1, 0.5}};
-//        Triangle_2 A1a = Triangle_2{Point_2{1, 0.5}, Point_2{0, 0}, Point_2{1, -1}};
-//        Triangle_2 A1b = Triangle_2{Point_2{1, -1}, Point_2{0, 0}, Point_2{-0.5, -1}};
-//        Triangle_2 A2 = Triangle_2{Point_2{0, 0}, Point_2{-0.5, -1}, Point_2{-2, -1}};
-//        Point_2 p2 = kraemer_method(A3);
-
-        const Segment_2 seg{p2, p1};
+        const Segment_2 seg{p1, p2};
 
         for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
             if (CGAL::do_intersect(seg, it.make_value_type(CGAL::Tag_true()))) {
-                sum += 1;
+                sum++;
                 break;
             }
         }
     }
 
-    return ((n - sum) / n).exact();
+    return (1 - (sum / Kernel::FT{n})).exact();
 }
 
 Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
                                      CGAL::Random_points_in_triangles_2<Point_2> &point_generator,
-                                     const Kernel::FT &n) {
+                                     const int n) {
     typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
     typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
     typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2> TEV;
@@ -174,6 +159,7 @@ Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
 //    Triangle_2 A1a = Triangle_2{Point_2{1, 0.5}, Point_2{0, 0}, Point_2{1, -1}};
 //    Triangle_2 A1b = Triangle_2{Point_2{1, -1}, Point_2{0, 0}, Point_2{-0.5, -1}};
 //    Triangle_2 A2 = Triangle_2{Point_2{0, 0}, Point_2{-0.5, -1}, Point_2{-2, -1}};
+//    CGAL::Random_points_in_triangle_2<Point_2> test{A3};
 
     Arrangement_2 env;
     CGAL::insert(env, polygon.edges_begin(), polygon.edges_end());
@@ -193,7 +179,7 @@ Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
         // find the face of the query point
         // (usually you may know that by other means)
         point_sample = *point_generator++;
-//        Point_2 point_sample = kraemer_method(A3);
+//        point_sample = *test++;
 
         obj = pl.locate(point_sample);
         // The query point locates in the interior of a face
@@ -205,12 +191,17 @@ Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
 
         std::vector<Point_2> visible_points;
         std::transform(regular_output.vertices_begin(), regular_output.vertices_end(),
-                       std::back_inserter(visible_points), [](const auto &x) -> Point_2 { return x.point(); });
+                       std::back_inserter(visible_points),
+                       [](const auto &x) -> Point_2 { return x.point(); });
 
         area = CGAL::polygon_area_2(visible_points.begin(), visible_points.end(), Kernel());
 
         sum += CGAL::abs(area);
-        sum = sum.exact();
+
+        // Destructor for Lazy_nt is recursive, so we have to resolve at some interval smaller than ~25000
+        if (i % RECURSION_DEPTH == 0) {
+            sum = sum.exact();
+        }
     }
 
     return (sum / (polygon.area() * n)).exact();
@@ -218,16 +209,16 @@ Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
 
 
 Kernel::FT simulate(const std::function<Kernel::FT(
-        const Polygon_2 &, CGAL::Random_points_in_triangles_2<Point_2> &, const Kernel::FT &)> &vis_func,
+        const Polygon_2 &, CGAL::Random_points_in_triangles_2<Point_2> &, const int)> &vis_func,
                     const std::string &fileName,
-                    const Kernel::FT &n = 10000) {
+                    const int n = 10000) {
 
     Polygon_2 polygon;
 
     polygon.push_back(Point_2{0, 0});
-    polygon.push_back(Point_2{-2, -1});
-    polygon.push_back(Point_2{1, -1});
-    polygon.push_back(Point_2{1, 2});
+    polygon.push_back(Point_2{-2.01, -1.01});
+    polygon.push_back(Point_2{1.01, -1.01});
+    polygon.push_back(Point_2{1.01, 2.01});
 
 //    read_polygon(fileName, polygon);
 
@@ -235,13 +226,12 @@ Kernel::FT simulate(const std::function<Kernel::FT(
     triangulate(polygon, triangles);
     CGAL::Random_points_in_triangles_2<Point_2> triangle_point_generator{triangles};
 
-
     return vis_func(polygon, triangle_point_generator, n);
 }
 
 
 int main() {
-    const Kernel::FT N = 1000000;
+    const int N = 100000;
     const std::string fileName{"many.line"};
 
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>> t1;
