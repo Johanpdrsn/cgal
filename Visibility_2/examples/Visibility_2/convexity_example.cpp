@@ -1,3 +1,7 @@
+//
+// Created by Johan Pedersen on 23/03/2022.
+//
+
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Triangular_expansion_visibility_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
@@ -122,20 +126,15 @@ Kernel::FT two_point_visibility_sample(const Polygon_2 &polygon,
                                        const double n) {
 
     int sum = 0;
-    Point_2 p1, p2;
     Segment_2 seg;
     for (int i = 0; i < n; i++) {
-        p1 = *triangle_point_generator++;
-        p2 = *triangle_point_generator++;
-
-        seg = {p1, p2};
+        seg = Segment_2 {*triangle_point_generator++, *triangle_point_generator++};
 
         for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
             if (CGAL::do_intersect(seg, it.make_value_type(CGAL::Tag_true()))) {
-                sum++;
+                ++sum;
                 break;
             }
-
         }
     }
 
