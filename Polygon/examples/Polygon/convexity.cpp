@@ -4,7 +4,6 @@
 #include <CGAL/Arr_naive_point_location.h>
 #include <CGAL/point_generators_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
-
 #include <random>
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
@@ -117,49 +116,39 @@ void read_polygon(const std::string &fileName, Polygon_2 &polygon) {
     in.close();
 }
 
+
 Kernel::FT two_point_visibility_sample(const Polygon_2 &polygon,
                                        CGAL::Random_points_in_triangles_2<Point_2> &triangle_point_generator,
-                                       const int n) {
-
-//    Triangle_2 A3 = Triangle_2{Point_2{1, 2}, Point_2{0, 0}, Point_2{1, 0.5}};
-//        Triangle_2 A1a = Triangle_2{Point_2{1, 0.5}, Point_2{0, 0}, Point_2{1, -1}};
-//        Triangle_2 A1b = Triangle_2{Point_2{1, -1}, Point_2{0, 0}, Point_2{-0.5, -1}};
-//        Triangle_2 A2 = Triangle_2{Point_2{0, 0}, Point_2{-0.5, -1}, Point_2{-2, -1}};
-//    CGAL::Random_points_in_triangle_2<Point_2> test{A3};
+                                       const double n) {
 
     int sum = 0;
     Point_2 p1, p2;
+    Segment_2 seg;
     for (int i = 0; i < n; i++) {
-//        p1 = *test++;
-
         p1 = *triangle_point_generator++;
         p2 = *triangle_point_generator++;
 
-        const Segment_2 seg{p1, p2};
+        seg = {p1, p2};
 
         for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
             if (CGAL::do_intersect(seg, it.make_value_type(CGAL::Tag_true()))) {
                 sum++;
                 break;
             }
+
         }
     }
 
-    return (1 - (sum / Kernel::FT{n}));
+    return (1.0 - (sum / n));
 }
+
 
 Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
                                      CGAL::Random_points_in_triangles_2<Point_2> &point_generator,
-                                     const int n) {
+                                     const double n) {
     typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
     typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
-    typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2> TEV;
-
-//    Triangle_2 A3 = Triangle_2{Point_2{1, 2}, Point_2{0, 0}, Point_2{1, 0.5}};
-//    Triangle_2 A1a = Triangle_2{Point_2{1, 0.5}, Point_2{0, 0}, Point_2{1, -1}};
-//    Triangle_2 A1b = Triangle_2{Point_2{1, -1}, Point_2{0, 0}, Point_2{-0.5, -1}};
-//    Triangle_2 A2 = Triangle_2{Point_2{0, 0}, Point_2{-0.5, -1}, Point_2{-2, -1}};
-//    CGAL::Random_points_in_triangle_2<Point_2> test{A3};
+    typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, CGAL::Tag_true> TEV;
 
     Arrangement_2 env;
     CGAL::insert(env, polygon.edges_begin(), polygon.edges_end());
@@ -177,50 +166,46 @@ Kernel::FT visibility_polygon_sample(const Polygon_2 &polygon,
 
     for (int i = 0; i < n; i++) {
         // find the face of the query point
-        // (usually you may know that by other means)
         point_sample = *point_generator++;
-//        point_sample = *test++;
-
         obj = pl.locate(point_sample);
         // The query point locates in the interior of a face
         face = boost::get<Arrangement_2::Face_const_handle>(&obj);
 
         // compute regularized visibility_sample area
-        // Define visibility object type that computes regularized visibility_sample area
         regular_visibility.compute_visibility(point_sample, *face, regular_output);
 
+        // Sadly the point type in the visibility result can't be used for area computation
         std::vector<Point_2> visible_points;
         std::transform(regular_output.vertices_begin(), regular_output.vertices_end(),
                        std::back_inserter(visible_points),
                        [](const auto &x) -> Point_2 { return x.point(); });
 
-        area = CGAL::polygon_area_2(visible_points.begin(), visible_points.end(), Kernel());
+        //  Sum the area
+        sum += CGAL::polygon_area_2(visible_points.begin(), visible_points.end(), Kernel());
 
-        sum += CGAL::abs(area);
-
-        // Destructor for Lazy_nt is recursive, so we have to resolve at some interval smaller than ~25000
+        //Destructor for Lazy_nt is recursive, so we have to resolve at some interval smaller than ~25000
         if (i % RECURSION_DEPTH == 0) {
             sum = sum.exact();
         }
     }
-
-    return (sum / (polygon.area() * n));
+    // Normalize to the size of the polygon
+    return sum / (polygon.area() * n);
 }
 
 
 Kernel::FT simulate(const std::function<Kernel::FT(
-        const Polygon_2 &, CGAL::Random_points_in_triangles_2<Point_2> &, const int)> &vis_func,
+        const Polygon_2 &, CGAL::Random_points_in_triangles_2<Point_2> &, const double)> &vis_func,
                     const std::string &fileName,
-                    const int n = 10000) {
+                    const double n = 10000) {
 
     Polygon_2 polygon;
 
-//    polygon.push_back(Point_2{0, 0});
-//    polygon.push_back(Point_2{-2.01, -1.01});
-//    polygon.push_back(Point_2{1.01, -1.01});
-//    polygon.push_back(Point_2{1.01, 2.01});
+    polygon.push_back(Point_2{0.0, 0.0});
+    polygon.push_back(Point_2{-2.0, -1.0});
+    polygon.push_back(Point_2{1.0, -1.0});
+    polygon.push_back(Point_2{1.0, 2.0});
 
-    read_polygon(fileName, polygon);
+//    read_polygon(fileName, polygon);
 
     std::vector<Triangle_2> triangles;
     triangulate(polygon, triangles);
@@ -231,8 +216,8 @@ Kernel::FT simulate(const std::function<Kernel::FT(
 
 
 int main() {
-    const int N = 10000;
-    const std::string fileName{"many.line"};
+    const double N = 100000;
+    const std::string fileName{"100.line"};
 
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>> t1;
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>> t2;
