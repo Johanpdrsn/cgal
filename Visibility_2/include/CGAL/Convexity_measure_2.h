@@ -39,11 +39,6 @@ namespace CGAL {
             triangulate();
         }
 
-        explicit Convexity_measure_2(const std::string &polygon_path) {
-            read_polygon(polygon_path);
-            triangulate();
-        }
-
         Kernel::FT two_point_visibility_sample(const double n) {
             CGAL::Random_points_in_triangles_2<Point_2> point_generator{triangles};
 
@@ -181,27 +176,6 @@ namespace CGAL {
                     triangles.emplace_back(ct.triangle(var));
                 }
             }
-        }
-
-        void read_polygon(const std::string &fileName) {
-            std::ifstream in{fileName};
-
-            if (!in.is_open()) {
-                throw std::runtime_error("Could not open polygon file: " + fileName);
-            }
-
-            Kernel::FT x{};
-            Kernel::FT y{};
-
-            int n;
-            in >> n;
-
-            for (int i = 1; i < n; ++i) {
-                in >> x;
-                in >> y;
-                polygon.push_back(Point_2{x, y});
-            }
-            in.close();
         }
     };
 }
