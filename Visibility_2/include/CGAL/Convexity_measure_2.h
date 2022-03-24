@@ -5,7 +5,6 @@
 #ifndef VISIBILITY_2_EXAMPLES_CONVEXITY_MEASURE_2_H
 #define VISIBILITY_2_EXAMPLES_CONVEXITY_MEASURE_2_H
 
-
 #include <CGAL/license/Visibility_2.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Triangular_expansion_visibility_2.h>
@@ -13,7 +12,6 @@
 #include <CGAL/Arr_naive_point_location.h>
 #include <CGAL/point_generators_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
-
 
 namespace CGAL {
 
@@ -29,7 +27,6 @@ namespace CGAL {
         }
     };
 
-
     class Convexity_measure_2 {
     public:
         typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
@@ -38,8 +35,7 @@ namespace CGAL {
         typedef Kernel::Point_2 Point_2;
         typedef Kernel::Segment_2 Segment_2;
 
-        explicit Convexity_measure_2(Polygon_2 &input_polygon) {
-            polygon = input_polygon;
+        explicit Convexity_measure_2(Polygon_2 &input_polygon) : polygon(input_polygon) {
             triangulate();
         }
 
@@ -53,26 +49,23 @@ namespace CGAL {
 
             int sum = 0;
             Segment_2 seg;
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < n; ++i) {
                 seg = Segment_2{*point_generator++, *point_generator++};
 
-                for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
+                for (auto it = polygon.edges_begin(); it != polygon.edges_end(); ++it) {
                     if (CGAL::do_intersect(seg, it.make_value_type(CGAL::Tag_true()))) {
                         ++sum;
                         break;
                     }
                 }
             }
-
             return (1.0 - (sum / n));
         }
-
 
         Kernel::FT visibility_polygon_sample(const double n) {
             typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
             typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
             typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, CGAL::Tag_true> TEV;
-
 
             CGAL::Random_points_in_triangles_2<Point_2> point_generator{triangles};
 
@@ -90,7 +83,7 @@ namespace CGAL {
             Kernel::FT area = 0;
             Kernel::FT sum = 0;
 
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < n; ++i) {
                 // find the face of the query point
                 point_sample = *point_generator++;
                 obj = pl.locate(point_sample);
@@ -118,7 +111,6 @@ namespace CGAL {
             return sum / (polygon.area() * n);
         }
 
-
     private:
         typedef CGAL::Triangulation_vertex_base_2<Kernel> Vb;
         typedef CGAL::Triangulation_face_base_with_info_2<FaceInfo2, Kernel> Fbb;
@@ -144,7 +136,7 @@ namespace CGAL {
                 queue.pop_front();
                 if (fh->info().nesting_level == -1) {
                     fh->info().nesting_level = index;
-                    for (int i = 0; i < 3; i++) {
+                    for (int i = 0; i < 3; ++i) {
                         CT::Edge e(fh, i);
                         CT::Face_handle n = fh->neighbor(i);
                         if (n->info().nesting_level == -1) {
@@ -204,7 +196,7 @@ namespace CGAL {
             int n;
             in >> n;
 
-            for (int i = 1; i < n; i++) {
+            for (int i = 1; i < n; ++i) {
                 in >> x;
                 in >> y;
                 polygon.push_back(Point_2{x, y});
@@ -212,8 +204,6 @@ namespace CGAL {
             in.close();
         }
     };
-
 }
-
 
 #endif //VISIBILITY_2_EXAMPLES_CONVEXITY_MEASURE_2_H

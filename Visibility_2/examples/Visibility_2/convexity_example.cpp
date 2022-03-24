@@ -10,7 +10,7 @@ int main() {
     typedef CGAL::Polygon_2<Kernel> Polygon_2;
     typedef Kernel::Point_2 Point_2;
 
-    const double N = 10000;
+    const int N = 1000000;
     const std::string home = getenv("HOME");
     const std::string fileName{home+"/Documents/Thesis/cgal/Visibility_2/examples/Visibility_2/100.line"};
 
@@ -39,20 +39,20 @@ int main() {
     ms_double = t2 - t1;
     std::cout << "Polygon prob for polygon: " << pol_vis << " in " << ms_double.count() << "ms" << std::endl;
 
-    CGAL::Convexity_measure_2 conv_path{fileName};
-    const double M = 1000;
+        CGAL::Convexity_measure_2 conv_path{fileName};
+        const double M = 1000;
 
-    t1 = std::chrono::high_resolution_clock::now();
-    two_points = conv_path.two_point_visibility_sample(M);
-    t2 = std::chrono::high_resolution_clock::now();
-    ms_double = t2 - t1;
-    std::cout << "Two points prob for file: " << two_points << " in " << ms_double.count() << "ms" << std::endl;
+        t1 = std::chrono::high_resolution_clock::now();
+        two_points = conv_path.two_point_visibility_sample(M);
+        t2 = std::chrono::high_resolution_clock::now();
+        ms_double = t2 - t1;
+        std::cout << "Two points prob for file: " << two_points << " in " << ms_double.count() << "ms" << std::endl;
 
-    t1 = std::chrono::high_resolution_clock::now();
-    pol_vis = conv_path.visibility_polygon_sample(M);
-    t2 = std::chrono::high_resolution_clock::now();
-    ms_double = t2 - t1;
-    std::cout << "Polygon prob for file: " << pol_vis << " in " << ms_double.count() << "ms" << std::endl;
+        t1 = std::chrono::high_resolution_clock::now();
+        pol_vis = conv_path.visibility_polygon_sample(M);
+        t2 = std::chrono::high_resolution_clock::now();
+        ms_double = t2 - t1;
+        std::cout << "Polygon prob for file: " << pol_vis << " in " << ms_double.count() << "ms" << std::endl;
 
 
     return EXIT_SUCCESS;
