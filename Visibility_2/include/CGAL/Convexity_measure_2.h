@@ -6,6 +6,8 @@
 #define VISIBILITY_2_EXAMPLES_CONVEXITY_MEASURE_2_H
 
 #include <CGAL/license/Visibility_2.h>
+
+
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Triangular_expansion_visibility_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
@@ -27,8 +29,10 @@ namespace CGAL {
         }
     };
 
-    class Convexity_measure_2 {
+    template<class Arrangement_2_, class RegularizationCategory = CGAL::Tag_true>
+    class Convexity_measure_2 final {
     public:
+
         typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
         typedef CGAL::Polygon_2<Kernel> Polygon_2;
         typedef Kernel::Triangle_2 Triangle_2;
@@ -39,7 +43,9 @@ namespace CGAL {
             triangulate();
         }
 
-        Kernel::FT two_point_visibility_sample(const double n) {
+        Kernel::FT two_point_visibility_sample(const int n) const {
+            assert(n > 0);
+
             CGAL::Random_points_in_triangles_2<Point_2> point_generator{triangles};
 
             int sum = 0;
@@ -54,13 +60,16 @@ namespace CGAL {
                     }
                 }
             }
-            return (1.0 - (sum / n));
+            return (1.0 - ((sum / static_cast<double>(n))));
         }
 
-        Kernel::FT visibility_polygon_sample(const double n) {
+        Kernel::FT visibility_polygon_sample(const int n) const {
+            typedef Arrangement_2_ Arrangement_2;
             typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
             typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
-            typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, CGAL::Tag_true> TEV;
+            typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, RegularizationCategory> TEV;
+
+            assert(n > 0);
 
             CGAL::Random_points_in_triangles_2<Point_2> point_generator{triangles};
 
@@ -166,7 +175,6 @@ namespace CGAL {
         }
 
         void triangulate() {
-
             CT ct;
             ct.insert_constraint(polygon.vertices_begin(), polygon.vertices_end(), true);
             mark_domains(ct);
