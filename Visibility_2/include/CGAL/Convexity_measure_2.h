@@ -29,7 +29,7 @@ namespace CGAL {
         }
     };
 
-    template<class Kernel, class Arrangement_2_, class RegularizationCategory = CGAL::Tag_true>
+    template<class Kernel>
     class Convexity_measure_2 final {
     public:
 
@@ -63,10 +63,9 @@ namespace CGAL {
         }
 
         typename Kernel::FT visibility_polygon_sample(const int n) const {
-            typedef Arrangement_2_ Arrangement_2;
             typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
             typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
-            typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, RegularizationCategory> TEV;
+            typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, CGAL::Tag_true> TEV;
 
             assert(n > 0);
 
