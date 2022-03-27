@@ -4,6 +4,8 @@
 
 #include <CGAL/Convexity_measure_2.h>
 #include <CGAL/Polygon_2.h>
+#include <unistd.h>
+#include <climits>
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
 typedef CGAL::Polygon_2<Kernel> Polygon_2;
@@ -31,12 +33,12 @@ void read_polygon(const std::string &fileName, Polygon_2 &polygon) {
     in.close();
 }
 
-
 int main() {
 
     const int N = 100000;
-    const std::string home = getenv("HOME");
-    const std::string fileName{home + "/Documents/Thesis/cgal/Visibility_2/examples/Visibility_2/100.line"};
+    char dir[PATH_MAX];
+    getcwd(dir, sizeof(dir));
+    const std::string fileName{std::string(dir) + "/../100.line"};
 
     Polygon_2 polygon;
     polygon.push_back(Point_2{0.0, 0.0});
@@ -48,7 +50,7 @@ int main() {
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>> t2;
     std::chrono::duration<double, std::milli> ms_double{};
 
-    CGAL::Convexity_measure_2<Arrangement_2, CGAL::Tag_true> conv_pol{polygon};
+    CGAL::Convexity_measure_2<Kernel> conv_pol{polygon};
 
     t1 = std::chrono::high_resolution_clock::now();
     Kernel::FT two_points = conv_pol.two_point_visibility_sample(N);
@@ -65,7 +67,7 @@ int main() {
 
     Polygon_2 file_polygon;
     read_polygon(fileName, file_polygon);
-    CGAL::Convexity_measure_2<Arrangement_2, CGAL::Tag_true> conv_path{file_polygon};
+    CGAL::Convexity_measure_2<Kernel> conv_path{file_polygon};
     const int M = N / 10;
 
     t1 = std::chrono::high_resolution_clock::now();
