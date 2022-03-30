@@ -14,6 +14,7 @@
 #include <CGAL/Arr_naive_point_location.h>
 #include <CGAL/point_generators_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
+#include <CGAL/Constrained_triangulation_plus_2.h>
 
 namespace CGAL {
 
@@ -98,10 +99,11 @@ namespace CGAL {
                 std::vector<Point_2> visible_points;
                 std::transform(regular_output.vertices_begin(), regular_output.vertices_end(),
                                std::back_inserter(visible_points),
-                               [](const auto &x) -> Point_2 { return x.point(); });
+                               [](const auto &x) { return x.point(); });
 
                 //  Sum the area
                 sum += CGAL::polygon_area_2(visible_points.begin(), visible_points.end(), Kernel());
+
 
                 //Destructor for Lazy_nt is recursive, so we have to resolve at some interval smaller than ~25000
                 if (i % RECURSION_DEPTH == 0) {
@@ -109,40 +111,43 @@ namespace CGAL {
                 }
             }
             // Normalize to the size of the polygon
-            return sum / (polygon.area() * n);
+            return sum / (CGAL::abs(polygon.area()) * n);
         }
 
     private:
+
         typedef CGAL::Triangulation_vertex_base_2<Kernel> Vb;
         typedef CGAL::Triangulation_face_base_with_info_2<FaceInfo2, Kernel> Fbb;
         typedef CGAL::Constrained_triangulation_face_base_2<Kernel, Fbb> Fb;
         typedef CGAL::Triangulation_data_structure_2<Vb, Fb> TDS;
         typedef CGAL::Exact_intersections_tag Itag;
         typedef CGAL::Constrained_triangulation_2<Kernel, TDS, Itag> CT;
+        typedef CGAL::Constrained_triangulation_plus_2<CT> CTP;
+
         typedef typename Kernel::Triangle_2 Triangle_2;
 
         Polygon_2 polygon;
         std::vector<Triangle_2> triangles;
 
-        static void mark_domains(CT &ct,
-                                 typename CT::Face_handle start,
+        static void mark_domains(CTP &ctp,
+                                 typename CTP::Face_handle start,
                                  int index,
-                                 std::list<typename CT::Edge> &border) {
+                                 std::list<typename CTP::Edge> &border) {
             if (start->info().nesting_level != -1) {
                 return;
             }
-            std::list<typename CT::Face_handle> queue;
+            std::list<typename CTP::Face_handle> queue;
             queue.push_back(start);
             while (!queue.empty()) {
-                typename CT::Face_handle fh = queue.front();
+                typename CTP::Face_handle fh = queue.front();
                 queue.pop_front();
                 if (fh->info().nesting_level == -1) {
                     fh->info().nesting_level = index;
                     for (int i = 0; i < 3; ++i) {
-                        typename CT::Edge e(fh, i);
-                        typename CT::Face_handle n = fh->neighbor(i);
+                        typename CTP::Edge e(fh, i);
+                        typename CTP::Face_handle n = fh->neighbor(i);
                         if (n->info().nesting_level == -1) {
-                            if (ct.is_constrained(e)) border.push_back(e);
+                            if (ctp.is_constrained(e)) border.push_back(e);
                             else queue.push_back(n);
                         }
                     }
@@ -156,30 +161,31 @@ namespace CGAL {
 //level of 0. Then we recursively consider the non-explored facets incident
 //to constrained edges bounding the former set and increase the nesting level by 1.
 //Facets in the domain are those with an odd nesting level.
-        static void mark_domains(CT &cdt) {
-            for (typename CT::Face_handle f: cdt.all_face_handles()) {
+        static void mark_domains(CTP &ctp) {
+
+            for (typename CTP::Face_handle f: ctp.all_face_handles()) {
                 f->info().nesting_level = -1;
             }
-            std::list<typename CT::Edge> border;
-            mark_domains(cdt, cdt.infinite_face(), 0, border);
+            std::list<typename CTP::Edge> border;
+            mark_domains(ctp, ctp.infinite_face(), 0, border);
             while (!border.empty()) {
-                typename CT::Edge e = border.front();
+                const typename CTP::Edge e = border.front();
                 border.pop_front();
-                typename CT::Face_handle n = e.first->neighbor(e.second);
+                typename CTP::Face_handle n = e.first->neighbor(e.second);
                 if (n->info().nesting_level == -1) {
-                    mark_domains(cdt, n, e.first->info().nesting_level + 1, border);
+                    mark_domains(ctp, n, e.first->info().nesting_level + 1, border);
                 }
             }
         }
 
         void triangulate() {
-            CT ct;
-            ct.insert_constraint(polygon.vertices_begin(), polygon.vertices_end(), true);
-            mark_domains(ct);
+            CTP ctp;
+            ctp.insert_constraint(polygon.vertices_begin(), polygon.vertices_end(), true);
+            mark_domains(ctp);
 
-            for (auto face: ct.finite_face_handles()) {
+            for (const auto &face: ctp.finite_face_handles()) {
                 if (face->info().in_domain()) {
-                    triangles.emplace_back(ct.triangle(face));
+                    triangles.emplace_back(ctp.triangle(face));
                 }
             }
         }
