@@ -17,8 +17,9 @@
 #include <CGAL/Constrained_triangulation_plus_2.h>
 
 namespace CGAL {
-
-    const int RECURSION_DEPTH = 10000;
+    const int LOWER_IT = 10;
+    const double MY_RESULT = 0.0001333266673;
+    const double MY_EPSILON = MY_RESULT / 100;
 
     struct FaceInfo2 {
         FaceInfo2() = default;
@@ -41,7 +42,7 @@ namespace CGAL {
             triangulate();
         }
 
-        typename Kernel::FT two_point_visibility_sample(const int n) const {
+        typename Kernel::FT two_point_visibility_sample(const long n) const {
             typedef typename Kernel::Segment_2 Segment_2;
 
             assert(n > 0);
@@ -50,7 +51,7 @@ namespace CGAL {
 
             int sum = 0;
             typename Kernel::Segment_2 seg;
-            for (int i = 0; i < n; ++i) {
+            for (int i = 1; i <= n; ++i) {
                 seg = Segment_2{*point_generator++, *point_generator++};
 
                 for (auto it = polygon.edges_begin(); it != polygon.edges_end(); ++it) {
@@ -59,11 +60,23 @@ namespace CGAL {
                         break;
                     }
                 }
+
+                auto res = (1.0 - ((sum / static_cast<double>(i))));
+                auto diff = CGAL::abs(MY_RESULT - res);
+                if (i>= LOWER_IT && diff <= MY_EPSILON) {
+                    std::cout << i
+                              << std::endl;
+//                    std::cout << "Polygon converged after : " << i << " iterations at " << CGAL::to_double(diff) << " difference"
+//                              << std::endl;
+                    return res;
+                }
+
+
             }
-            return (1.0 - ((sum / static_cast<double>(n))));
+            return 1.0 - ((sum / static_cast<typename Kernel::FT>(n)));
         }
 
-        typename Kernel::FT visibility_polygon_sample(const int n) const {
+        typename Kernel::FT visibility_polygon_sample(const long n) const {
             typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
             typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
             typedef CGAL::Triangular_expansion_visibility_2<Arrangement_2, CGAL::Tag_true> TEV;
@@ -85,7 +98,7 @@ namespace CGAL {
 
             typename Kernel::FT sum = 0;
 
-            for (int i = 0; i < n; ++i) {
+            for (int i = 1; i <= n; ++i) {
                 // find the face of the query point
                 point_sample = *point_generator++;
                 obj = pl.locate(point_sample);
@@ -104,14 +117,19 @@ namespace CGAL {
                 //  Sum the area
                 sum += CGAL::polygon_area_2(visible_points.begin(), visible_points.end(), Kernel());
 
-
-                //Destructor for Lazy_nt is recursive, so we have to resolve at some interval smaller than ~25000
-                if (i % RECURSION_DEPTH == 0) {
-                    sum = CGAL::exact(sum);
+                typename Kernel::FT res = sum / (CGAL::abs(polygon.area())*i);
+                auto diff = CGAL::abs(MY_RESULT - res);
+                if (i >= LOWER_IT && diff <= MY_EPSILON) {
+                    std::cout << i
+                              << std::endl;
+//                    std::cout << "Polygon converged after : " << i << " iterations at " << CGAL::to_double(diff) << " difference"
+//                              << std::endl;
+                    return res;
                 }
+
             }
             // Normalize to the size of the polygon
-            return sum / (CGAL::abs(polygon.area()) * n);
+            return sum / (CGAL::abs(polygon.area()) * static_cast<typename Kernel::FT>(n));
         }
 
     private:
