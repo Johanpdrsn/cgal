@@ -3,7 +3,7 @@
 //
 
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Constrained_triangulation_plus_2.h>
@@ -52,20 +52,18 @@ public:
 
     Polygon_2 polygon;
     vector<CTP::Face> triangles;
-    vector<CTP::Edge> diagonals;
-    vector<Segment_2> segments;
+    vector<Segment_2> diagonals;
 
     CTP triangulation;
     RedBlackTree<Polygon_2> bst;
-    BinaryTree<vector<CTP::Face>> tree;
+    BinaryTree<CTP> tree;
 
 
     explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon) {
         triangulate();
         sweep_diagonals();
 
-        tree = BinaryTree<vector<CTP::Face>>
-                (triangles);
+        tree = BinaryTree<CTP>(triangles);
         generate_tree_rec(tree.Root());
 //        generate_diagonals();
     }
@@ -131,13 +129,9 @@ private:
     }
 
 
-    void generate_tree_rec(Node<vector<CTP::Face>>
-
-                           *node) {
-        auto leftNode = new Node<vector<CTP::Face>>
-                (vector<CTP::Face>());
-        auto rightNode = new Node<vector<CTP::Face>>
-                (vector<CTP::Face>());
+    void generate_tree_rec(BinaryTree<CTP>::Node *node) {
+        auto leftNode = tree.EmptyNode();
+        auto rightNode = tree.EmptyNode();
 
         if (node->data.size() <= 1) {
             return;
@@ -152,8 +146,8 @@ private:
                     rightNode->data.emplace_back(it);
                 }
             }
-
         }
+
         node->left = leftNode;
         generate_tree_rec(leftNode);
         node->right = rightNode;
@@ -187,32 +181,30 @@ private:
                         bool c = find(polygon.edges_begin(), polygon.edges_end(), seg) != polygon.edges_end();
                         bool d =
                                 find(polygon.edges_begin(), polygon.edges_end(), seg.opposite()) != polygon.edges_end();
-                        bool e = find(segments.begin(), segments.end(), seg) != segments.end();
-                        bool f = find(segments.begin(), segments.end(), seg.opposite()) != segments.end();
+                        bool e = find(diagonals.begin(), diagonals.end(), seg) != diagonals.end();
+                        bool f = find(diagonals.begin(), diagonals.end(), seg.opposite()) != diagonals.end();
 
                         if (!(c || d || e || f)) {
-                            segments.emplace_back(seg);
+                            diagonals.emplace_back(seg);
                         }
                     }
                 }
             }
         }
 
-        cout << "SORT" << endl;
-        std::sort(segments.begin(), segments.end(),
+        std::sort(diagonals.begin(), diagonals.end(),
                   [&](Segment_2 &A, Segment_2 &B) {
                       return segment_angle(A) < segment_angle(B);
                   });
     }
 
-    double segment_angle(const Segment_2 &seg) {
-
+    static double segment_angle(const Segment_2 &seg) {
         if (seg.is_horizontal()) {
             return 0;
         } else if (seg.is_vertical()) {
             return M_PI_2;
         } else {
-            auto slope = seg.direction().dy() / seg.direction().dx();
+            auto slope = CGAL::to_double(seg.direction().dy() / seg.direction().dx());
             return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
         }
     }
@@ -235,10 +227,7 @@ int main() {
 
     auto test = Convexity_measure_exact_2(polygon);
 
-
-    for (auto& var: test.segments) {
-        cout << var << endl;
-    }
+    test.tree.prettyPrint();
 
     return 0;
 }

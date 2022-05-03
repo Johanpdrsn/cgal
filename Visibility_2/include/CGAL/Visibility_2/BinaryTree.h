@@ -1,37 +1,42 @@
 template<class T>
-class Node {
-public:
-    T data;
-    Node *left;
-    Node *right;
-
-    // Val is the key or the value that
-    // has to be added to the data part
-    explicit Node(T val) {
-        data = val;
-
-        // Left and right child for node
-        // will be initialized to null
-        left = nullptr;
-        right = nullptr;
-    }
-
-    void printData() {
-        for (auto var: data) {
-            std::cout << var.vertex(0)->point() << var.vertex(1)->point() << var.vertex(2)->point() << std::endl;
-        }
-    }
-};
-
-template<class T>
 class BinaryTree {
 public:
+    typedef typename T::Face Face;
+    typedef std::vector<Face> Faces;
 
-    Node<T> *Root() {
+    class Node {
+    public:
+        Faces data;
+        Node *left;
+        Node *right;
+
+        // Val is the key or the value that
+        // has to be added to the data part
+        explicit Node(Faces val) {
+            data = val;
+
+            // Left and right child for node
+            // will be initialized to null
+            left = nullptr;
+            right = nullptr;
+        }
+
+        void printData() {
+            std::cout << "[";
+            for (auto var: data) {
+                typename T::Triangle a(var.vertex(0)->point(), var.vertex(1)->point(), var.vertex(2)->point());
+                std::cout << a;
+            }
+            std::cout << "]" << std::endl;
+        }
+    };
+
+
+    Node *Root() {
         return root;
     }
 
-    void printPreOrder(Node<T> *node) {
+    void printPreOrder(Node *node) {
         if (node == nullptr)
             return;
 
@@ -42,7 +47,7 @@ public:
         printPreOrder(node->right);
     }
 
-    void printInOrder(Node<T> *node) {
+    void printInOrder(Node *node) {
         if (node == nullptr)
             return;
 
@@ -53,7 +58,7 @@ public:
         printInOrder(node->right);
     }
 
-    void printPostOrder(Node<T> *node) {
+    void printPostOrder(Node *node) {
         if (node == nullptr)
             return;
 
@@ -68,16 +73,20 @@ public:
         }
     }
 
-    BinaryTree(T val) {
-        root = new Node<T>(val);
+    BinaryTree(Faces val) {
+        root = new Node(val);
     }
 
     BinaryTree() {};
 
-private:
-    Node<T> *root;
+    Node *EmptyNode() {
+        return new Node(Faces());
+    }
 
-    void printHelper(Node<T> *rootArg, std::string indent, bool last) {
+private:
+    Node *root;
+
+    void printHelper(Node *rootArg, std::string indent, bool last) {
         // print the tree structure on the screen
         if (rootArg != nullptr) {
             std::cout << indent;
@@ -90,9 +99,7 @@ private:
             }
 
 //            std::cout << rootArg->data.size() << std::endl;
-            for (auto var: rootArg->data) {
-                std::cout << var.vertex(0)->point() << var.vertex(1)->point() << var.vertex(2)->point() << std::endl;
-            }
+            rootArg->printData();
             printHelper(rootArg->left, indent, false);
             printHelper(rootArg->right, indent, true);
         }
