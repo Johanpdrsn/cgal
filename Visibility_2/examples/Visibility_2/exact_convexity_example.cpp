@@ -63,6 +63,25 @@ public:
         generate_tree(triangles);
     }
 
+    static CTP::Edge *common_edge(const BinaryTree<CTP>::Node *A, const BinaryTree<CTP>::Node *B) {
+
+
+        for (auto face: B->data) {
+            std::set<CTP::Point> s{face->vertex(0)->point(), face->vertex(1)->point(),
+                                   face->vertex(2)->point()};
+            for (int i = 0; i < 3; i++) {
+
+                bool in1 = s.count(A->data.front()->vertex(i)->point()) == 1;
+                bool in2 = s.count(A->data.front()->vertex(A->data.front()->ccw(i))->point()) == 1;
+
+                if (in1 && in2) {
+                    return new CTP::Edge{A->data.front(), A->data.front()->cw(i)};
+                }
+            }
+        }
+        return nullptr;
+    }
+
 
 private:
 
@@ -121,6 +140,7 @@ private:
         }
     }
 
+
     static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
         std::set<CTP::Point> a{A->vertex(0)->point(), A->vertex(1)->point(), A->vertex(2)->point()};
 
@@ -154,6 +174,8 @@ private:
         auto n = count_vertices(node->data);
         auto lowerBound = std::floor((n - 1) / 3.0);
         auto upperBound = std::floor((2 * n - 5) / 3.0);
+
+        CTP::Edge diagonal;
 
         if (node->data.size() <= 1) {
             return;
@@ -189,6 +211,7 @@ private:
                     rightNode->data.clear();
                 }
             }
+
             node->left = leftNode;
             decompose_tree_rec(leftNode);
             node->right = rightNode;
@@ -274,8 +297,11 @@ int main() {
 
     auto test = Convexity_measure_exact_2(polygon);
 
+    auto a = Convexity_measure_exact_2::common_edge(test.tree.Root()->left->left, test.tree.Root()->left->right);
+
     test.tree.prettyPrint();
 
 
+    cout << test.triangulation.segment(*a) << endl;
     return 0;
 }
