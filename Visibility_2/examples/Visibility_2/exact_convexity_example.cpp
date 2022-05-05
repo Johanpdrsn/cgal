@@ -93,7 +93,6 @@ private:
     }
 
     static void mark_domains(CTP &ctp) {
-
         for (CTP::Face_handle f: ctp.all_face_handles()) {
             f->info().nesting_level = -1;
         }
@@ -110,7 +109,6 @@ private:
     }
 
     void triangulate() {
-
         triangulation.insert_constraint(polygon.vertices_begin(), polygon.vertices_end(), true);
         mark_domains(triangulation);
 
@@ -139,10 +137,79 @@ private:
                             [&](const CTP::Face_handle &A) { return face_equality(A, face); }) != list.end();
     }
 
+    static double count_vertices(const vector<CTP::Face_handle> &list) {
+        std::set<CTP::Point> s;
+        for (auto face: list) {
+            for (int i = 0; i < 3; i++) {
+                s.insert(face->vertex(i)->point());
+            }
+        }
+        return static_cast<double>(s.size());
+    }
+
+    void decompose_tree_rec(BinaryTree<CTP>::Node *node) {
+        auto leftNode = tree.EmptyNode();
+        auto rightNode = tree.EmptyNode();
+
+        auto n = count_vertices(node->data);
+        auto lowerBound = std::floor((n - 1) / 3.0);
+        auto upperBound = std::floor((2 * n - 5) / 3.0);
+
+        if (node->data.size() <= 1) {
+            return;
+        } else {
+            for (auto face: node->data) {
+                leftNode->data.emplace_back(face);
+                face->tds_data().mark_processed();
+
+                while (true) {
+                    for (int i = 0; i < 3; i++) {
+                        face = face->neighbor(i);
+                        if (face_in_list(node->data, face) && !face->tds_data().processed())
+                            break;
+                    }
+
+                    if (static_cast<double>(leftNode->data.size()) + 1 <= upperBound) {
+                        face->tds_data().mark_processed();
+                        leftNode->data.emplace_back(face);
+                    } else {
+                        break;
+                    }
+                }
+
+                if (static_cast<double>(leftNode->data.size()) >= lowerBound) {
+                    for (auto f: node->data) {
+                        f->tds_data().clear();
+                        if (!face_in_list(leftNode->data, f))
+                            rightNode->data.emplace_back(f);
+                    }
+                    break;
+                } else {
+                    leftNode->data.clear();
+                    rightNode->data.clear();
+                }
+            }
+            node->left = leftNode;
+            decompose_tree_rec(leftNode);
+            node->right = rightNode;
+            decompose_tree_rec(rightNode);
+        }
+    }
 
     void generate_tree(vector<CTP::Face_handle> &data) {
         tree.SetRoot(data);
         decompose_tree_rec(tree.Root());
+    }
+
+    static double segment_angle(const Segment_2 &seg) {
+        if (seg.is_horizontal()) {
+            return 0;
+        } else if (seg.is_vertical()) {
+            return M_PI_2;
+        } else {
+            auto slope = CGAL::to_double(seg.direction().dy() / seg.direction().dx());
+            return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
+        }
     }
 
     void sweep_diagonals() {
@@ -188,75 +255,6 @@ private:
                       return segment_angle(A) < segment_angle(B);
                   });
     }
-
-    static double segment_angle(const Segment_2 &seg) {
-        if (seg.is_horizontal()) {
-            return 0;
-        } else if (seg.is_vertical()) {
-            return M_PI_2;
-        } else {
-            auto slope = CGAL::to_double(seg.direction().dy() / seg.direction().dx());
-            return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
-        }
-    }
-
-
-    void decompose_tree_rec(BinaryTree<CTP>::Node *node) {
-        auto leftNode = tree.EmptyNode();
-        auto rightNode = tree.EmptyNode();
-
-
-        std::set<CTP::Point> s;
-        for (auto face: node->data) {
-            for (int i = 0; i < 3; i++) {
-                s.insert(face->vertex(i)->point());
-            }
-        }
-        auto n = static_cast<double>(s.size());
-
-        auto lowerBound = std::floor((n - 1) / 3.0);
-        auto upperBound = std::floor((2 * n - 5) / 3.0);
-
-        if (node->data.size() <= 1) {
-            return;
-        } else {
-            for (auto face: node->data) {
-
-
-                while (true) {
-                    for (int i = 0; i < 3; i++) {
-                        face = face->neighbor(i);
-                        if (face_in_list(node->data, face) && !face->tds_data().processed())
-                            break;
-                    }
-
-                    if (face_in_list(node->data, face) && !face->tds_data().processed()) {
-                        face->tds_data().mark_processed();
-                        if (static_cast<double>(leftNode->data.size()) + 1 <= upperBound)
-                            leftNode->data.emplace_back(face);
-                    } else
-                        break;
-                }
-
-                if (static_cast<double>(leftNode->data.size()) >= lowerBound) {
-                    for (auto f: node->data) {
-                        f->tds_data().clear();
-                        if (!face_in_list(leftNode->data, f))
-                            rightNode->data.emplace_back(f);
-                    }
-                    break;
-                } else {
-                    leftNode->data.clear();
-                    rightNode->data.clear();
-                }
-            }
-            node->left = leftNode;
-            decompose_tree_rec(leftNode);
-            node->right = rightNode;
-            decompose_tree_rec(rightNode);
-
-        }
-    }
 };
 
 
@@ -277,7 +275,7 @@ int main() {
     auto test = Convexity_measure_exact_2(polygon);
 
     test.tree.prettyPrint();
-    
+
 
     return 0;
 }
