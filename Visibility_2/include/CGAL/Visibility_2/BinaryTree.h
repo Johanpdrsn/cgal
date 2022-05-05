@@ -1,7 +1,7 @@
 template<class T>
 class BinaryTree {
 public:
-    typedef typename T::Face Face;
+    typedef typename T::Face_handle Face;
     typedef std::vector<Face> Faces;
 
     class Node {
@@ -21,10 +21,16 @@ public:
             right = nullptr;
         }
 
+        ~Node() {
+            delete left;
+            delete right;
+
+        }
+
         void printData() {
             std::cout << "[";
             for (auto var: data) {
-                typename T::Triangle a(var.vertex(0)->point(), var.vertex(1)->point(), var.vertex(2)->point());
+                typename T::Triangle a(var->vertex(0)->point(), var->vertex(1)->point(), var->vertex(2)->point());
                 std::cout << a;
             }
             std::cout << "]" << std::endl;
@@ -36,35 +42,8 @@ public:
         return root;
     }
 
-    void printPreOrder(Node *node) {
-        if (node == nullptr)
-            return;
-
-        for (auto var: node->data) {
-            std::cout << var.vertex(0)->point() << var.vertex(1)->point() << var.vertex(2)->point() << std::endl;
-        }
-        printPreOrder(node->left);
-        printPreOrder(node->right);
-    }
-
-    void printInOrder(Node *node) {
-        if (node == nullptr)
-            return;
-
-        printInOrder(node->left);
-        for (auto var: node->data) {
-            std::cout << var.vertex(0)->point() << var.vertex(1)->point() << var.vertex(2)->point() << std::endl;
-        }
-        printInOrder(node->right);
-    }
-
-    void printPostOrder(Node *node) {
-        if (node == nullptr)
-            return;
-
-        printPostOrder(node->left);
-        printPostOrder(node->right);
-        node->printData();
+    void SetRoot(Faces data) {
+        root = new Node(data);
     }
 
     void prettyPrint() {
@@ -73,11 +52,13 @@ public:
         }
     }
 
-    BinaryTree(Faces val) {
-        root = new Node(val);
-    }
+    BinaryTree() {
+        root = nullptr;
+    };
 
-    BinaryTree() {};
+    ~BinaryTree() {
+        delete root;
+    };
 
     Node *EmptyNode() {
         return new Node(Faces());

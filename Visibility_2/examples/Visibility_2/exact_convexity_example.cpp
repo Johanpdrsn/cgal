@@ -8,7 +8,6 @@
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Constrained_triangulation_plus_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
-#include <CGAL/Visibility_2/RedBlackTree.h>
 #include <CGAL/Visibility_2/BinaryTree.h>
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
@@ -16,8 +15,8 @@
 #include <CGAL/Cartesian.h>
 
 
-//typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
-typedef CGAL::Cartesian<double> Kernel;
+typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
+//typedef CGAL::Cartesian<double> Kernel;
 typedef CGAL::Polygon_2<Kernel> Polygon_2;
 typedef Kernel::Point_2 Point_2;
 
@@ -51,21 +50,17 @@ public:
 
 
     Polygon_2 polygon;
-    vector<CTP::Face> triangles;
+    vector<CTP::Face_handle> triangles;
     vector<Segment_2> diagonals;
 
     CTP triangulation;
-    RedBlackTree<Polygon_2> bst;
     BinaryTree<CTP> tree;
 
 
-    explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon) {
+    explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon), tree() {
         triangulate();
         sweep_diagonals();
-
-        tree = BinaryTree<CTP>(triangles);
-        generate_tree_rec(tree.Root());
-//        generate_diagonals();
+        generate_tree(triangles);
     }
 
 
@@ -123,35 +118,31 @@ private:
             if (!face->info().in_domain()) {
                 triangulation.delete_face(face);
             } else {
-                triangles.emplace_back(*face);
+                triangles.emplace_back(face);
             }
         }
     }
 
+    static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
+        std::set<CTP::Point> a{A->vertex(0)->point(), A->vertex(1)->point(), A->vertex(2)->point()};
 
-    void generate_tree_rec(BinaryTree<CTP>::Node *node) {
-        auto leftNode = tree.EmptyNode();
-        auto rightNode = tree.EmptyNode();
-
-        if (node->data.size() <= 1) {
-            return;
-        } else {
-            auto size = static_cast<double>(node->data.size());
-            long bound = std::floor(size / 2.0);
-
-            for (const auto &it: node->data) {
-                if (leftNode->data.size() < bound) {
-                    leftNode->data.emplace_back(it);
-                } else {
-                    rightNode->data.emplace_back(it);
-                }
-            }
+        for (int i = 0; i < 3; i++) {
+            if (a.count(B->vertex(i)->point()) == 0)
+                return false;
         }
+        return true;
 
-        node->left = leftNode;
-        generate_tree_rec(leftNode);
-        node->right = rightNode;
-        generate_tree_rec(rightNode);
+    }
+
+    static bool face_in_list(const vector<CTP::Face_handle> &list, const CTP::Face_handle &face) {
+        return std::find_if(list.begin(), list.end(),
+                            [&](const CTP::Face_handle &A) { return face_equality(A, face); }) != list.end();
+    }
+
+
+    void generate_tree(vector<CTP::Face_handle> &data) {
+        tree.SetRoot(data);
+        decompose_tree_rec(tree.Root());
     }
 
     void sweep_diagonals() {
@@ -208,6 +199,64 @@ private:
             return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
         }
     }
+
+
+    void decompose_tree_rec(BinaryTree<CTP>::Node *node) {
+        auto leftNode = tree.EmptyNode();
+        auto rightNode = tree.EmptyNode();
+
+
+        std::set<CTP::Point> s;
+        for (auto face: node->data) {
+            for (int i = 0; i < 3; i++) {
+                s.insert(face->vertex(i)->point());
+            }
+        }
+        auto n = static_cast<double>(s.size());
+
+        auto lowerBound = std::floor((n - 1) / 3.0);
+        auto upperBound = std::floor((2 * n - 5) / 3.0);
+
+        if (node->data.size() <= 1) {
+            return;
+        } else {
+            for (auto face: node->data) {
+
+
+                while (true) {
+                    for (int i = 0; i < 3; i++) {
+                        face = face->neighbor(i);
+                        if (face_in_list(node->data, face) && !face->tds_data().processed())
+                            break;
+                    }
+
+                    if (face_in_list(node->data, face) && !face->tds_data().processed()) {
+                        face->tds_data().mark_processed();
+                        if (static_cast<double>(leftNode->data.size()) + 1 <= upperBound)
+                            leftNode->data.emplace_back(face);
+                    } else
+                        break;
+                }
+
+                if (static_cast<double>(leftNode->data.size()) >= lowerBound) {
+                    for (auto f: node->data) {
+                        f->tds_data().clear();
+                        if (!face_in_list(leftNode->data, f))
+                            rightNode->data.emplace_back(f);
+                    }
+                    break;
+                } else {
+                    leftNode->data.clear();
+                    rightNode->data.clear();
+                }
+            }
+            node->left = leftNode;
+            decompose_tree_rec(leftNode);
+            node->right = rightNode;
+            decompose_tree_rec(rightNode);
+
+        }
+    }
 };
 
 
@@ -228,6 +277,7 @@ int main() {
     auto test = Convexity_measure_exact_2(polygon);
 
     test.tree.prettyPrint();
+    
 
     return 0;
 }
