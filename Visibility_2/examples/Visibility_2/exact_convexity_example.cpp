@@ -63,12 +63,17 @@ public:
         generate_tree(triangles);
     }
 
+    struct PointHashFunction {
+        size_t operator()(const CTP::Point &t) const {
+            return hash<double>()(CGAL::to_double(CGAL::exact(t.x()))) ^
+                   hash<double>()(CGAL::to_double(CGAL::exact(t.y())));
+        }
+    };
+
     static CTP::Edge *common_edge(const BinaryTree<CTP>::Node *A, const BinaryTree<CTP>::Node *B) {
-
-
         for (auto face: B->data) {
-            std::set<CTP::Point> s{face->vertex(0)->point(), face->vertex(1)->point(),
-                                   face->vertex(2)->point()};
+            std::unordered_set<CTP::Point, PointHashFunction> s{face->vertex(0)->point(), face->vertex(1)->point(),
+                                                                face->vertex(2)->point()};
             for (int i = 0; i < 3; i++) {
 
                 bool in1 = s.count(A->data.front()->vertex(i)->point()) == 1;
@@ -81,7 +86,6 @@ public:
         }
         return nullptr;
     }
-
 
 private:
 
@@ -142,14 +146,13 @@ private:
 
 
     static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
-        std::set<CTP::Point> a{A->vertex(0)->point(), A->vertex(1)->point(), A->vertex(2)->point()};
-
+        std::unordered_set<CTP::Point, PointHashFunction> s{A->vertex(0)->point(), A->vertex(1)->point(),
+                                                            A->vertex(2)->point()};
         for (int i = 0; i < 3; i++) {
-            if (a.count(B->vertex(i)->point()) == 0)
+            if (s.count(B->vertex(i)->point()) == 0)
                 return false;
         }
         return true;
-
     }
 
     static bool face_in_list(const vector<CTP::Face_handle> &list, const CTP::Face_handle &face) {
@@ -158,7 +161,7 @@ private:
     }
 
     static double count_vertices(const vector<CTP::Face_handle> &list) {
-        std::set<CTP::Point> s;
+        std::unordered_set<CTP::Point, PointHashFunction> s;
         for (auto face: list) {
             for (int i = 0; i < 3; i++) {
                 s.insert(face->vertex(i)->point());
@@ -211,7 +214,6 @@ private:
                     rightNode->data.clear();
                 }
             }
-
             node->left = leftNode;
             decompose_tree_rec(leftNode);
             node->right = rightNode;
@@ -240,11 +242,9 @@ private:
         typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
         typedef CGAL::Rotational_sweep_visibility_2<Arrangement_2> RSV;
 
-
         // insert geometry into the arrangement
         Arrangement_2 env;
         CGAL::insert_non_intersecting_curves(env, polygon.edges_begin(), polygon.edges_end());
-
 
         for (auto he: env.halfedge_handles()) {
             if (!he->face()->is_unbounded()) {
@@ -272,7 +272,6 @@ private:
                 }
             }
         }
-
         std::sort(diagonals.begin(), diagonals.end(),
                   [&](Segment_2 &A, Segment_2 &B) {
                       return segment_angle(A) < segment_angle(B);
@@ -301,6 +300,14 @@ int main() {
 
     test.tree.prettyPrint();
 
+
+    struct PointHashFunction {
+        size_t operator()(const CTP::Point &t) const {
+            return hash<double>()(CGAL::to_double(t.x())) ^ hash<double>()(CGAL::to_double(t.y()));
+        }
+    };
+
+    std::unordered_set<CTP::Point, PointHashFunction> s{CTP::Point{1, 1}};
 
     cout << test.triangulation.segment(*a) << endl;
     return 0;
