@@ -12,11 +12,10 @@
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Rotational_sweep_visibility_2.h>
-#include <CGAL/Cartesian.h>
 
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
-//typedef CGAL::Cartesian<double> Kernel;
+//typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
+typedef CGAL::Simple_cartesian<double> Kernel;
 typedef CGAL::Polygon_2<Kernel> Polygon_2;
 typedef Kernel::Point_2 Point_2;
 
@@ -24,7 +23,9 @@ typedef CGAL::Polygon_2<Kernel> Polygon_2;
 typedef Kernel::Point_2 Point_2;
 typedef Kernel::Triangle_2 Triangle_2;
 typedef Kernel::Segment_2 Segment_2;
-
+typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
+typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
+typedef CGAL::Rotational_sweep_visibility_2<Arrangement_2> RSV;
 using namespace std;
 
 struct FaceInfo2 {
@@ -188,12 +189,15 @@ private:
                 face->tds_data().mark_processed();
 
                 while (true) {
+
+                    // Find face that is in the input list and has not been added to the left node
                     for (int i = 0; i < 3; i++) {
                         face = face->neighbor(i);
                         if (face_in_list(node->data, face) && !face->tds_data().processed())
                             break;
                     }
 
+                    // If the size of the leftnode is smaller thatn bound add it and mark the face
                     if (static_cast<double>(leftNode->data.size()) + 1 <= upperBound) {
                         face->tds_data().mark_processed();
                         leftNode->data.emplace_back(face);
@@ -202,6 +206,7 @@ private:
                     }
                 }
 
+                // If the lefnode list is larger thatn the lower bound add unmark faced to right
                 if (static_cast<double>(leftNode->data.size()) >= lowerBound) {
                     for (auto f: node->data) {
                         f->tds_data().clear();
@@ -237,19 +242,18 @@ private:
         }
     }
 
-    void sweep_diagonals() {
-        typedef CGAL::Arr_segment_traits_2<Kernel> Traits_2;
-        typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
-        typedef CGAL::Rotational_sweep_visibility_2<Arrangement_2> RSV;
 
+    void sweep_diagonals() {
         // insert geometry into the arrangement
         Arrangement_2 env;
         CGAL::insert_non_intersecting_curves(env, polygon.edges_begin(), polygon.edges_end());
 
         for (auto he: env.halfedge_handles()) {
+
             if (!he->face()->is_unbounded()) {
                 Arrangement_2 output_arr;
                 RSV rsv(env);
+
 
                 auto p = he->target()->point();
                 rsv.compute_visibility(p, he, output_arr);
@@ -257,15 +261,32 @@ private:
                 for (auto v: output_arr.vertex_handles()) {
                     bool vis_point_in_poly = find(polygon.vertices_begin(), polygon.vertices_end(), v->point()) !=
                                              polygon.vertices_end();
+
+                    // CHeck if point in the visible polygon exists in the input polygon
                     if (vis_point_in_poly && p != v->point()) {
                         auto seg = Segment_2(p, v->point());
+
+                        // Check if segment edge in polygon
                         bool c = find(polygon.edges_begin(), polygon.edges_end(), seg) != polygon.edges_end();
                         bool d =
                                 find(polygon.edges_begin(), polygon.edges_end(), seg.opposite()) != polygon.edges_end();
+
+                        // CHeck ig segment is already added to diagonals
                         bool e = find(diagonals.begin(), diagonals.end(), seg) != diagonals.end();
                         bool f = find(diagonals.begin(), diagonals.end(), seg.opposite()) != diagonals.end();
 
-                        if (!(c || d || e || f)) {
+                        if (!(e || f)) {
+//                            cout << "Reg: " << endl;
+//                            cout << seg << endl;
+//                            cout << find_eta(seg) << endl;
+//                            cout << "Opposite: " << endl;
+//                            cout << seg.opposite() << endl;
+//                            cout << find_eta(seg.opposite()) << endl;
+                            cout << "INPUT: " << seg << endl;
+
+                            auto a = find_eta(seg);
+                            cout << "RESULT: " << a << endl;
+
                             diagonals.emplace_back(seg);
                         }
                     }
@@ -277,6 +298,55 @@ private:
                       return segment_angle(A) < segment_angle(B);
                   });
     }
+
+    Segment_2 find_eta(Segment_2 &s) const {
+
+        bool is_edge = std::any_of(polygon.edges_begin(), polygon.edges_end(),
+                                   [&s](Segment_2 a) { return a == s || a == s.opposite(); });
+
+        int num = 0;
+        auto cur = polygon.vertices_circulator();
+        while (*cur != s.target()) {
+            ++cur;
+            ++num;
+        }
+
+        cur = polygon.vertices_circulator() + num;
+
+        auto next = cur + 1;
+        bool polygon_is_right = next->y() < cur->y();
+
+        if (is_edge && polygon_is_right) {
+            cout << "EDGE AND LEFT" << endl;
+            return s;
+        } else if (is_edge && next->x() < cur->x()) {
+            cout << "EDGE BUT NOT LEFT" << endl;
+            return Segment_2{s.target(), *next};
+        }
+        else if(s.is_horizontal()){
+            return Segment_2{s.target(), *next};
+        }
+        else {
+            cout << "REST" << endl;
+            auto r = Kernel::Ray_2(s.target(), s.direction());
+            Segment_2 left_plus;
+            Kernel::FT min_y = INT_MAX;
+
+            for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
+                const auto result = intersection(r, *it);
+                if (result) {
+                    if (const Point_2 *p = boost::get<Point_2>(&*result)) {
+                        Kernel::FT diff = abs(p->y() - s.target().y());
+                        if (diff > 0 && diff < min_y) {
+                            min_y = diff;
+                            left_plus = *it;
+                        }
+                    }
+                }
+            }
+            return left_plus;
+        }
+    }
 };
 
 
@@ -284,31 +354,29 @@ int main() {
     CGAL::IO::set_pretty_mode(std::cout);
 
     Polygon_2 polygon;
+//    polygon.push_back(Point_2{0.0, 0.0});
+//    polygon.push_back(Point_2{-2.0, -1.0});
+//    polygon.push_back(Point_2{0.0, -2.0});
+//    polygon.push_back(Point_2{1.0, -4.0});
+//    polygon.push_back(Point_2{2.0, -2.0});
+//    polygon.push_back(Point_2{4.0, -1.0});
+//    polygon.push_back(Point_2{2.0, 0.0});
+//    polygon.push_back(Point_2{1.0, 2.0});
     polygon.push_back(Point_2{0.0, 0.0});
-    polygon.push_back(Point_2{-2.0, -1.0});
-    polygon.push_back(Point_2{0.0, -2.0});
-    polygon.push_back(Point_2{1.0, -4.0});
     polygon.push_back(Point_2{2.0, -2.0});
-    polygon.push_back(Point_2{4.0, -1.0});
-    polygon.push_back(Point_2{2.0, 0.0});
-    polygon.push_back(Point_2{1.0, 2.0});
+    polygon.push_back(Point_2{1.0, 0.0});
+    polygon.push_back(Point_2{2.0, 2.0});
 
 
     auto test = Convexity_measure_exact_2(polygon);
 
-    auto a = Convexity_measure_exact_2::common_edge(test.tree.Root()->left->left, test.tree.Root()->left->right);
 
-    test.tree.prettyPrint();
+//    test.tree.prettyPrint();
+//
+//    for (auto& s: test.diagonals) {
+//        cout << s << endl;
+//    }
 
 
-    struct PointHashFunction {
-        size_t operator()(const CTP::Point &t) const {
-            return hash<double>()(CGAL::to_double(t.x())) ^ hash<double>()(CGAL::to_double(t.y()));
-        }
-    };
-
-    std::unordered_set<CTP::Point, PointHashFunction> s{CTP::Point{1, 1}};
-
-    cout << test.triangulation.segment(*a) << endl;
     return 0;
 }
