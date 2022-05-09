@@ -12,7 +12,8 @@
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Rotational_sweep_visibility_2.h>
-
+#include <CGAL/Visibility_2/LinkedList.h>
+#include <CGAL/aff_transformation_tags.h>
 
 //typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
 typedef CGAL::Simple_cartesian<double> Kernel;
@@ -47,6 +48,72 @@ typedef CGAL::Constrained_triangulation_2<Kernel, TDS, Itag> CT;
 typedef CGAL::Constrained_triangulation_plus_2<CT> CTP;
 
 class Convexity_measure_exact_2 final {
+
+
+private:
+    struct PointHashFunction {
+        size_t operator()(const CTP::Point &t) const {
+            return hash<double>()(CGAL::to_double(CGAL::exact(t.x()))) ^
+                   hash<double>()(CGAL::to_double(CGAL::exact(t.y())));
+        }
+    };
+
+    struct SegmentHash {
+        size_t operator()(const Segment_2 &t) const {
+            auto h = hash<double>{};
+            return h(CGAL::to_double((t.source().x()))) ^ h(CGAL::to_double((t.source().y())))
+                   ^ h(CGAL::to_double((t.target().x()))) ^ h(CGAL::to_double((t.target().y())));
+        }
+    };
+
+
+    static double segment_angle(const Segment_2 &seg) {
+        if (seg.is_horizontal()) {
+            return 0;
+        } else if (seg.is_vertical()) {
+            return M_PI_2;
+        } else {
+            auto slope = CGAL::to_double(seg.direction().dy() / seg.direction().dx());
+            return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
+        }
+    }
+
+    static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
+        std::unordered_set<CTP::Point, PointHashFunction> s{A->vertex(0)->point(), A->vertex(1)->point(),
+                                                            A->vertex(2)->point()};
+        for (int i = 0; i < 3; i++) {
+            if (s.count(B->vertex(i)->point()) == 0)
+                return false;
+        }
+        return true;
+    }
+
+    static bool face_in_list(const vector<CTP::Face_handle> &list, const CTP::Face_handle &face) {
+        return std::find_if(list.begin(), list.end(),
+                            [&](const CTP::Face_handle &A) { return face_equality(A, face); }) != list.end();
+    }
+
+    static double count_vertices(const vector<CTP::Face_handle> &list) {
+        std::unordered_set<CTP::Point, PointHashFunction> s;
+        for (auto face: list) {
+            for (int i = 0; i < 3; i++) {
+                s.insert(face->vertex(i)->point());
+            }
+        }
+        return static_cast<double>(s.size());
+    }
+
+    static bool is_edge_in_faces(vector<CTP::Face_handle> &faces, Segment_2 &seg) {
+        for (auto face: faces) {
+            for (int i = 0; i < 3; i++) {
+                if (seg == Segment_2(face->vertex(i)->point(), face->vertex((i + 1) % 3)->point()))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+
 public:
 
 
@@ -57,36 +124,19 @@ public:
     CTP triangulation;
     BinaryTree<CTP> tree;
 
+    unordered_map<Segment_2, Segment_2, SegmentHash> diagMap;
 
     explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon), tree() {
         triangulate();
         sweep_diagonals();
         generate_tree(triangles);
+
+
+        find_diagonal_subsets(tree.Root()->left, tree.Root()->right);
+
+        create_event_list();
     }
 
-    struct PointHashFunction {
-        size_t operator()(const CTP::Point &t) const {
-            return hash<double>()(CGAL::to_double(CGAL::exact(t.x()))) ^
-                   hash<double>()(CGAL::to_double(CGAL::exact(t.y())));
-        }
-    };
-
-    static CTP::Edge *common_edge(const BinaryTree<CTP>::Node *A, const BinaryTree<CTP>::Node *B) {
-        for (auto face: B->data) {
-            std::unordered_set<CTP::Point, PointHashFunction> s{face->vertex(0)->point(), face->vertex(1)->point(),
-                                                                face->vertex(2)->point()};
-            for (int i = 0; i < 3; i++) {
-
-                bool in1 = s.count(A->data.front()->vertex(i)->point()) == 1;
-                bool in2 = s.count(A->data.front()->vertex(A->data.front()->ccw(i))->point()) == 1;
-
-                if (in1 && in2) {
-                    return new CTP::Edge{A->data.front(), A->data.front()->cw(i)};
-                }
-            }
-        }
-        return nullptr;
-    }
 
 private:
 
@@ -145,30 +195,73 @@ private:
         }
     }
 
-
-    static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
-        std::unordered_set<CTP::Point, PointHashFunction> s{A->vertex(0)->point(), A->vertex(1)->point(),
-                                                            A->vertex(2)->point()};
-        for (int i = 0; i < 3; i++) {
-            if (s.count(B->vertex(i)->point()) == 0)
-                return false;
-        }
-        return true;
-    }
-
-    static bool face_in_list(const vector<CTP::Face_handle> &list, const CTP::Face_handle &face) {
-        return std::find_if(list.begin(), list.end(),
-                            [&](const CTP::Face_handle &A) { return face_equality(A, face); }) != list.end();
-    }
-
-    static double count_vertices(const vector<CTP::Face_handle> &list) {
-        std::unordered_set<CTP::Point, PointHashFunction> s;
-        for (auto face: list) {
-            for (int i = 0; i < 3; i++) {
-                s.insert(face->vertex(i)->point());
+    Segment_2 *find_diagonal(BinaryTree<CTP>::Node *leftNode, BinaryTree<CTP>::Node *rightNode) {
+        int res;
+        for (auto leftFace: leftNode->data) {
+            for (auto rightFace: rightNode->data) {
+                if (leftFace->has_neighbor(rightFace, res)) {
+                    return new Segment_2(triangulation.segment(CTP::Edge(leftFace, res)));
+                }
             }
         }
-        return static_cast<double>(s.size());
+        return nullptr;
+    }
+
+
+    tuple<vector<Segment_2>, vector<Segment_2>, vector<Segment_2>>
+    find_diagonal_subsets(BinaryTree<CTP>::Node *leftNode, BinaryTree<CTP>::Node *rightNode) {
+        CTP::Face_handle source_face;
+        CTP::Face_handle target_face;
+
+
+        vector<Segment_2> leftDiagonals;
+        vector<Segment_2> rightDiagonals;
+        vector<Segment_2> crossingDiagonals;
+
+
+        for (const auto &diag: diagonals) {
+            source_face = triangulation.locate(diag.source());
+            target_face = triangulation.locate(diag.target());
+
+            face_in_list(leftNode->data, target_face);
+
+            if (face_in_list(leftNode->data, source_face) && face_in_list(leftNode->data, target_face)) {
+                leftDiagonals.emplace_back(diag);
+            } else if (face_in_list(rightNode->data, source_face) && face_in_list(rightNode->data, target_face)) {
+                rightDiagonals.emplace_back(diag);
+            } else if ((face_in_list(rightNode->data, source_face) && face_in_list(leftNode->data, target_face)) ||
+                       (face_in_list(leftNode->data, source_face) && face_in_list(rightNode->data, target_face))) {
+                crossingDiagonals.emplace_back(diag);
+            }
+        }
+
+        auto diagonal = *find_diagonal(leftNode, rightNode);
+
+
+        for (const auto &s: leftDiagonals) {
+            if (!is_edge_in_faces(leftNode->data, diagMap[s]))
+                diagMap[s] = diagonal;
+        }
+
+        for (const auto &s: rightDiagonals) {
+            if (!is_edge_in_faces(rightNode->data, diagMap[s]))
+                diagMap[s] = diagonal;
+        }
+
+        std::sort(leftDiagonals.begin(), leftDiagonals.end(),
+                  [&](const Segment_2 &A, const Segment_2 &B) {
+                      return segment_angle(A) < segment_angle(B);
+                  });
+        std::sort(rightDiagonals.begin(), rightDiagonals.end(),
+                  [&](const Segment_2 &A, const Segment_2 &B) {
+                      return segment_angle(A) < segment_angle(B);
+                  });
+        std::sort(crossingDiagonals.begin(), crossingDiagonals.end(),
+                  [&](const Segment_2 &A, const Segment_2 &B) {
+                      return segment_angle(A) < segment_angle(B);
+                  });
+
+        return make_tuple(leftDiagonals, crossingDiagonals, rightDiagonals);
     }
 
     void decompose_tree_rec(BinaryTree<CTP>::Node *node) {
@@ -179,15 +272,12 @@ private:
         auto lowerBound = std::floor((n - 1) / 3.0);
         auto upperBound = std::floor((2 * n - 5) / 3.0);
 
-        CTP::Edge diagonal;
-
         if (node->data.size() <= 1) {
             return;
         } else {
             for (auto face: node->data) {
                 leftNode->data.emplace_back(face);
                 face->tds_data().mark_processed();
-
                 while (true) {
 
                     // Find face that is in the input list and has not been added to the left node
@@ -197,7 +287,7 @@ private:
                             break;
                     }
 
-                    // If the size of the leftnode is smaller thatn bound add it and mark the face
+                    // If the size of the leftNode is smaller than bound add it and mark the face
                     if (static_cast<double>(leftNode->data.size()) + 1 <= upperBound) {
                         face->tds_data().mark_processed();
                         leftNode->data.emplace_back(face);
@@ -206,7 +296,7 @@ private:
                     }
                 }
 
-                // If the lefnode list is larger thatn the lower bound add unmark faced to right
+                // If the left node list is larger than the lower bound add unmark faced to right
                 if (static_cast<double>(leftNode->data.size()) >= lowerBound) {
                     for (auto f: node->data) {
                         f->tds_data().clear();
@@ -229,17 +319,6 @@ private:
     void generate_tree(vector<CTP::Face_handle> &data) {
         tree.SetRoot(data);
         decompose_tree_rec(tree.Root());
-    }
-
-    static double segment_angle(const Segment_2 &seg) {
-        if (seg.is_horizontal()) {
-            return 0;
-        } else if (seg.is_vertical()) {
-            return M_PI_2;
-        } else {
-            auto slope = CGAL::to_double(seg.direction().dy() / seg.direction().dx());
-            return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
-        }
     }
 
 
@@ -265,87 +344,76 @@ private:
                     // CHeck if point in the visible polygon exists in the input polygon
                     if (vis_point_in_poly && p != v->point()) {
                         auto seg = Segment_2(p, v->point());
-
-                        // Check if segment edge in polygon
-                        bool c = find(polygon.edges_begin(), polygon.edges_end(), seg) != polygon.edges_end();
-                        bool d =
-                                find(polygon.edges_begin(), polygon.edges_end(), seg.opposite()) != polygon.edges_end();
-
-                        // CHeck ig segment is already added to diagonals
-                        bool e = find(diagonals.begin(), diagonals.end(), seg) != diagonals.end();
-                        bool f = find(diagonals.begin(), diagonals.end(), seg.opposite()) != diagonals.end();
-
-                        if (!(e || f)) {
-//                            cout << "Reg: " << endl;
-//                            cout << seg << endl;
-//                            cout << find_eta(seg) << endl;
-//                            cout << "Opposite: " << endl;
-//                            cout << seg.opposite() << endl;
-//                            cout << find_eta(seg.opposite()) << endl;
-                            cout << "INPUT: " << seg << endl;
-
-                            auto a = find_eta(seg);
-                            cout << "RESULT: " << a << endl;
-
-                            diagonals.emplace_back(seg);
-                        }
+                        diagMap.insert(make_tuple(seg, find_eta(seg)));
                     }
                 }
             }
         }
-        std::sort(diagonals.begin(), diagonals.end(),
-                  [&](Segment_2 &A, Segment_2 &B) {
-                      return segment_angle(A) < segment_angle(B);
-                  });
+    }
+
+    Segment_2 find_nearest_intersecting_segment(const Segment_2 &s) const {
+        auto r = Kernel::Ray_2(s.target(), s.direction());
+        Kernel::FT min_y = INT_MAX;
+        Segment_2 left_plus;
+
+        for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
+            const auto result = intersection(r, *it);
+            if (result) {
+                if (const Point_2 *p = boost::get<Point_2>(&*result)) {
+                    Kernel::FT diff = abs(p->y() - s.target().y());
+                    if (diff > 0 && diff < min_y) {
+                        min_y = diff;
+                        left_plus = *it;
+                    }
+                }
+            }
+        }
+        return left_plus;
     }
 
     Segment_2 find_eta(Segment_2 &s) const {
-
         bool is_edge = std::any_of(polygon.edges_begin(), polygon.edges_end(),
-                                   [&s](Segment_2 a) { return a == s || a == s.opposite(); });
+                                   [&s](const Segment_2 &a) { return a == s; });
+        bool is_opposite_edge = std::any_of(polygon.edges_begin(), polygon.edges_end(),
+                                            [&s](const Segment_2 &a) { return a == s.opposite(); });
 
-        int num = 0;
-        auto cur = polygon.vertices_circulator();
-        while (*cur != s.target()) {
-            ++cur;
-            ++num;
-        }
-
-        cur = polygon.vertices_circulator() + num;
-
+        auto cur = find(polygon.vertices_circulator(), polygon.vertices_circulator() - 1, s.target());
+        auto prev = cur - 1;
         auto next = cur + 1;
-        bool polygon_is_right = next->y() < cur->y();
 
-        if (is_edge && polygon_is_right) {
-            cout << "EDGE AND LEFT" << endl;
-            return s;
-        } else if (is_edge && next->x() < cur->x()) {
-            cout << "EDGE BUT NOT LEFT" << endl;
-            return Segment_2{s.target(), *next};
-        }
-        else if(s.is_horizontal()){
-            return Segment_2{s.target(), *next};
-        }
-        else {
-            cout << "REST" << endl;
-            auto r = Kernel::Ray_2(s.target(), s.direction());
-            Segment_2 left_plus;
-            Kernel::FT min_y = INT_MAX;
-
-            for (auto it = polygon.edges_begin(); it != polygon.edges_end(); it++) {
-                const auto result = intersection(r, *it);
-                if (result) {
-                    if (const Point_2 *p = boost::get<Point_2>(&*result)) {
-                        Kernel::FT diff = abs(p->y() - s.target().y());
-                        if (diff > 0 && diff < min_y) {
-                            min_y = diff;
-                            left_plus = *it;
-                        }
-                    }
-                }
+        // clockwise edge
+        if (is_opposite_edge) {
+            if (right_turn(*next, *cur, *prev)) {
+                return s;
+            } else {
+                return {s.target(), *next};
             }
-            return left_plus;
+            // counterclockwise edge
+        } else if (is_edge) {
+            if (!right_turn(*prev, *cur, *next)) {
+                return {s.target(), *next};
+            } else {
+                return find_nearest_intersecting_segment(s);
+            }
+            // non edge
+        } else {
+            if (!right_turn(s.source(), s.target(), *next)) {
+                return {s.target(), *next};
+            } else {
+                return find_nearest_intersecting_segment(s);
+
+            }
         }
+    }
+
+    void create_event_list() {
+
+//        auto current_diagonals = find_diagonal_subsets(tree.Root()->left, tree.Root()->right);
+//        auto leftDiagonals = get<0>(current_diagonals);
+//        auto rightDiagonals = get<1>(current_diagonals);
+//        auto crossingDiagonals = get<2>(current_diagonals);
+
+
     }
 };
 
@@ -354,28 +422,33 @@ int main() {
     CGAL::IO::set_pretty_mode(std::cout);
 
     Polygon_2 polygon;
-//    polygon.push_back(Point_2{0.0, 0.0});
-//    polygon.push_back(Point_2{-2.0, -1.0});
-//    polygon.push_back(Point_2{0.0, -2.0});
-//    polygon.push_back(Point_2{1.0, -4.0});
-//    polygon.push_back(Point_2{2.0, -2.0});
-//    polygon.push_back(Point_2{4.0, -1.0});
-//    polygon.push_back(Point_2{2.0, 0.0});
-//    polygon.push_back(Point_2{1.0, 2.0});
     polygon.push_back(Point_2{0.0, 0.0});
+    polygon.push_back(Point_2{-2.0, -1.0});
+    polygon.push_back(Point_2{0.0, -2.0});
+    polygon.push_back(Point_2{1.0, -4.0});
     polygon.push_back(Point_2{2.0, -2.0});
-    polygon.push_back(Point_2{1.0, 0.0});
-    polygon.push_back(Point_2{2.0, 2.0});
+    polygon.push_back(Point_2{4.0, -1.0});
+    polygon.push_back(Point_2{2.0, 0.0});
+    polygon.push_back(Point_2{1.0, 2.0});
+//    polygon.push_back(Point_2{0.0, 0.0});
+//    polygon.push_back(Point_2{2.0, -2.0});
+//    polygon.push_back(Point_2{1.0, 0.0});
+//    polygon.push_back(Point_2{2.0, 2.0});
 
 
     auto test = Convexity_measure_exact_2(polygon);
 
 
+    for (const auto &a: test.diagMap) {
+        cout << a.first << ", Eta: " << a.second << endl;
+    }
+    cout << test.diagMap.size() << endl;
 //    test.tree.prettyPrint();
 //
 //    for (auto& s: test.diagonals) {
 //        cout << s << endl;
 //    }
+
 
 
     return 0;
