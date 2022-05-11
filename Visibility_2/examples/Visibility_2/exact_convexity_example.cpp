@@ -15,8 +15,8 @@
 #include <CGAL/Visibility_2/LinkedList.h>
 #include <CGAL/aff_transformation_tags.h>
 
-//typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
-typedef CGAL::Simple_cartesian<double> Kernel;
+typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
+//typedef CGAL::Simple_cartesian<double> Kernel;
 typedef CGAL::Polygon_2<Kernel> Polygon_2;
 typedef Kernel::Point_2 Point_2;
 
@@ -71,10 +71,10 @@ private:
         if (seg.is_horizontal()) {
             return 0;
         } else if (seg.is_vertical()) {
-            return M_PI_2;
+            return CGAL_PI / 2.0;
         } else {
             auto slope = CGAL::to_double(seg.direction().dy() / seg.direction().dx());
-            return atan(slope) > 0 ? atan(slope) : atan(slope) + M_PI;
+            return atan(slope) > 0 ? atan(slope) : atan(slope) + CGAL_PI;
         }
     }
 
@@ -116,23 +116,18 @@ private:
 
 public:
 
-
     Polygon_2 polygon;
     vector<CTP::Face_handle> triangles;
-    vector<Segment_2> diagonals;
 
     CTP triangulation;
     BinaryTree<CTP> tree;
-
+    Segment_2 diagonal;
     unordered_map<Segment_2, Segment_2, SegmentHash> diagMap;
 
     explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon), tree() {
         triangulate();
         sweep_diagonals();
         generate_tree(triangles);
-
-
-        find_diagonal_subsets(tree.Root()->left, tree.Root()->right);
 
         create_event_list();
     }
@@ -210,33 +205,40 @@ private:
 
     tuple<vector<Segment_2>, vector<Segment_2>, vector<Segment_2>>
     find_diagonal_subsets(BinaryTree<CTP>::Node *leftNode, BinaryTree<CTP>::Node *rightNode) {
-        CTP::Face_handle source_face;
-        CTP::Face_handle target_face;
-
-
         vector<Segment_2> leftDiagonals;
         vector<Segment_2> rightDiagonals;
         vector<Segment_2> crossingDiagonals;
 
 
-        for (const auto &diag: diagonals) {
-            source_face = triangulation.locate(diag.source());
-            target_face = triangulation.locate(diag.target());
+        unordered_set<Point_2, PointHashFunction> leftPoints;
+        unordered_set<Point_2, PointHashFunction> rightPoints;
 
-            face_in_list(leftNode->data, target_face);
+        diagonal = *find_diagonal(leftNode, rightNode);
 
-            if (face_in_list(leftNode->data, source_face) && face_in_list(leftNode->data, target_face)) {
-                leftDiagonals.emplace_back(diag);
-            } else if (face_in_list(rightNode->data, source_face) && face_in_list(rightNode->data, target_face)) {
-                rightDiagonals.emplace_back(diag);
-            } else if ((face_in_list(rightNode->data, source_face) && face_in_list(leftNode->data, target_face)) ||
-                       (face_in_list(leftNode->data, source_face) && face_in_list(rightNode->data, target_face))) {
-                crossingDiagonals.emplace_back(diag);
+        for (auto f: leftNode->data) {
+            for (int i = 0; i < 3; i++) {
+                leftPoints.insert(f->vertex(i)->point());
+            }
+        }
+        for (auto f: rightNode->data) {
+            for (int i = 0; i < 3; i++) {
+                rightPoints.insert(f->vertex(i)->point());
             }
         }
 
-        auto diagonal = *find_diagonal(leftNode, rightNode);
+        for (const auto &diag: diagMap) {
+            if ((leftPoints.count(diag.first.source()) == 1 && rightPoints.count(diag.first.target()) == 1) ||
+                (rightPoints.count(diag.first.source()) == 1 && leftPoints.count(diag.first.target())) == 1) {
+                crossingDiagonals.emplace_back(diag.first);
+            } else if (leftPoints.count(diag.first.source()) == 1 && leftPoints.count(diag.first.target()) == 1) {
+                leftDiagonals.emplace_back(diag.first);
+            } else if (rightPoints.count(diag.first.source()) == 1 && rightPoints.count(diag.first.target()) == 1) {
+                rightDiagonals.emplace_back(diag.first);
+            }
+        }
 
+
+        cout << "DIAGONAL: " << diagonal << endl;
 
         for (const auto &s: leftDiagonals) {
             if (!is_edge_in_faces(leftNode->data, diagMap[s]))
@@ -249,17 +251,19 @@ private:
         }
 
         std::sort(leftDiagonals.begin(), leftDiagonals.end(),
-                  [&](const Segment_2 &A, const Segment_2 &B) {
-                      return segment_angle(A) < segment_angle(B);
-                  });
+                  [](const Segment_2 &A, const Segment_2 &B) { return segment_angle(A) < segment_angle(B); }
+        );
         std::sort(rightDiagonals.begin(), rightDiagonals.end(),
-                  [&](const Segment_2 &A, const Segment_2 &B) {
-                      return segment_angle(A) < segment_angle(B);
-                  });
+                  [](const Segment_2 &A, const Segment_2 &B) { return segment_angle(A) < segment_angle(B); }
+        );
         std::sort(crossingDiagonals.begin(), crossingDiagonals.end(),
-                  [&](const Segment_2 &A, const Segment_2 &B) {
-                      return segment_angle(A) < segment_angle(B);
-                  });
+                  [this](const Segment_2 &A, const Segment_2 &B) {
+                      if (A == diagonal || A == diagonal.opposite())
+                          return true;
+                      else
+                          return segment_angle(A) > segment_angle(B);
+                  }
+        );
 
         return make_tuple(leftDiagonals, crossingDiagonals, rightDiagonals);
     }
@@ -408,11 +412,67 @@ private:
 
     void create_event_list() {
 
-//        auto current_diagonals = find_diagonal_subsets(tree.Root()->left, tree.Root()->right);
-//        auto leftDiagonals = get<0>(current_diagonals);
-//        auto rightDiagonals = get<1>(current_diagonals);
-//        auto crossingDiagonals = get<2>(current_diagonals);
+        auto current_diagonals = find_diagonal_subsets(tree.Root()->left, tree.Root()->right);
+        auto leftDiagonals = get<0>(current_diagonals);
+        auto crossingDiagonals = get<1>(current_diagonals);
+        auto rightDiagonals = get<2>(current_diagonals);
 
+//        for (auto &a: crossingDiagonals) {
+//            cout << a << endl;
+//            cout << segment_angle(a)<< endl;
+//        }
+
+        auto eventList = new LinkedList<Point_2, Segment_2>();
+
+        auto a = crossingDiagonals.front();
+
+        eventList->push_front(a.source(), diagMap[a], diagMap[a.opposite()]);
+
+
+        eventList->push_back(a.target(), diagMap[a.opposite()], diagMap[a]);
+
+
+        for (auto it = crossingDiagonals.begin() + 2; it != crossingDiagonals.end(); it += 2) {
+            cout << *it << endl;
+            if (!eventList->in_list(it->target())) {
+                cout << "APPEARANCE: " << it->target() << endl;
+                eventList->insert_after(eventList->head, it->target(), eventList->head->next->top,
+                                        eventList->head->next->bot);
+            } else if (!eventList->in_list(it->source())) {
+                cout << "APPEARANCE: " << it->source() << endl;
+                eventList->insert_after(eventList->head, it->source(), eventList->head->next->top,
+                                        eventList->head->next->bot);
+            } else {
+                auto s = *it;
+
+                auto doneTarget = find_if(it + 2, crossingDiagonals.end(),
+                                          [&s](const Segment_2 &A) {
+                                              return s.target() == A.target() || s.target() == A.source();
+                                          });
+
+                auto doneSource = find_if(it + 2, crossingDiagonals.end(),
+                                          [&s](const Segment_2 &A) {
+                                              return s.source() == A.target() || s.source() == A.source();
+                                          });
+
+                if (doneSource == crossingDiagonals.end()) {
+                    cout << "DISAPPEARANCE: " << it->source() << endl;
+
+
+                    eventList->delete_val(it->source());
+
+                } else if (doneTarget == crossingDiagonals.end()) {
+                    cout << "DISAPPEARANCE target: " << it->source() << endl;
+
+
+                    eventList->delete_val(it->target());
+
+                } else {
+                    cout << "SWAP" << endl;
+                }
+            }
+            eventList->forward_traverse();
+        }
 
     }
 };
@@ -422,32 +482,31 @@ int main() {
     CGAL::IO::set_pretty_mode(std::cout);
 
     Polygon_2 polygon;
-    polygon.push_back(Point_2{0.0, 0.0});
-    polygon.push_back(Point_2{-2.0, -1.0});
-    polygon.push_back(Point_2{0.0, -2.0});
-    polygon.push_back(Point_2{1.0, -4.0});
-    polygon.push_back(Point_2{2.0, -2.0});
-    polygon.push_back(Point_2{4.0, -1.0});
-    polygon.push_back(Point_2{2.0, 0.0});
-    polygon.push_back(Point_2{1.0, 2.0});
+//    polygon.push_back(Point_2{0, 0});
+//    polygon.push_back(Point_2{-2, -1});
+//    polygon.push_back(Point_2{0, -2});
+//    polygon.push_back(Point_2{1, -4});
+//    polygon.push_back(Point_2{2, -2});
+//    polygon.push_back(Point_2{4, -1});
+//    polygon.push_back(Point_2{2, 0});
+//    polygon.push_back(Point_2{1, 2});
+
+    polygon.push_back(Point_2{0, 0});
+    polygon.push_back(Point_2{1, -2.0});
+    polygon.push_back(Point_2{2, 0});
+    polygon.push_back(Point_2{2, 2});
+
 //    polygon.push_back(Point_2{0.0, 0.0});
-//    polygon.push_back(Point_2{2.0, -2.0});
-//    polygon.push_back(Point_2{1.0, 0.0});
-//    polygon.push_back(Point_2{2.0, 2.0});
+//    polygon.push_back(Point_2{-2.0, -1.0});
+//    polygon.push_back(Point_2{1.0, -1.0});
+//    polygon.push_back(Point_2{1.0, 2.0});
 
 
     auto test = Convexity_measure_exact_2(polygon);
 
 
-    for (const auto &a: test.diagMap) {
-        cout << a.first << ", Eta: " << a.second << endl;
-    }
-    cout << test.diagMap.size() << endl;
 //    test.tree.prettyPrint();
 //
-//    for (auto& s: test.diagonals) {
-//        cout << s << endl;
-//    }
 
 
 
