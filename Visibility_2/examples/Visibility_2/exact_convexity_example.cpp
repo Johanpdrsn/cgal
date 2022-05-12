@@ -12,8 +12,8 @@
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Rotational_sweep_visibility_2.h>
-#include <CGAL/Visibility_2/LinkedList.h>
 #include <CGAL/aff_transformation_tags.h>
+//#include <CGAL/Visibility_2/Integral.h>
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
 //typedef CGAL::Simple_cartesian<double> Kernel;
@@ -65,6 +65,29 @@ private:
                    ^ h(CGAL::to_double((t.target().x()))) ^ h(CGAL::to_double((t.target().y())));
         }
     };
+
+    struct Event {
+        Point_2 target;
+        Segment_2 top;
+        Segment_2 bot;
+        double angle{};
+
+        bool operator==(const Event &A) const {
+            return this->target == A.target;
+        }
+    };
+
+    static void calculate_trapezoids(std::list<Event> &list) {
+
+        for (auto it = next(list.begin()); it != list.end(); it++) {
+            cout << "TOP0: " << it->top.source() << endl;
+            cout << "TOP1: " << it->top.target() << endl;
+            cout << "BOT0: " << it->bot.source() << endl;
+            cout << "BOT1: " << it->bot.target() << endl;
+            cout << "PL: " << prev(it)->target << endl;
+            cout << "PR: " << it->target << endl;
+        }
+    }
 
 
     static double segment_angle(const Segment_2 &seg) {
@@ -236,9 +259,20 @@ private:
                 rightDiagonals.emplace_back(diag.first);
             }
         }
+//
+//
+//        cout << "DIAGONAL: " << diagonal << endl;
+//
+//
+//        cout << polygon << endl;
+//        auto dir = Kernel::Direction_2(1, 1);
+//        cout << dir << endl;
+//
+//
+//        Kernel::Aff_transformation_2 rational_rotate{CGAL::ROTATION, dir, 1, INT_MAX};
+//        auto p1 = transform(rational_rotate, polygon);
+//        cout << p1 << endl;
 
-
-        cout << "DIAGONAL: " << diagonal << endl;
 
         for (const auto &s: leftDiagonals) {
             if (!is_edge_in_faces(leftNode->data, diagMap[s]))
@@ -261,7 +295,7 @@ private:
                       if (A == diagonal || A == diagonal.opposite())
                           return true;
                       else
-                          return segment_angle(A) > segment_angle(B);
+                          return segment_angle(A) < segment_angle(B);
                   }
         );
 
@@ -417,63 +451,47 @@ private:
         auto crossingDiagonals = get<1>(current_diagonals);
         auto rightDiagonals = get<2>(current_diagonals);
 
-//        for (auto &a: crossingDiagonals) {
-//            cout << a << endl;
-//            cout << segment_angle(a)<< endl;
+//        for (auto &firstEvent: crossingDiagonals) {
+//            cout << firstEvent << endl;
+////            cout << segment_angle(firstEvent) << endl;
 //        }
 
-        auto eventList = new LinkedList<Point_2, Segment_2>();
 
-        auto a = crossingDiagonals.front();
+//        for (auto a: diagMap) {
+//            cout << a.first << ":" << a.second << endl;
+//        }
 
-        eventList->push_front(a.source(), diagMap[a], diagMap[a.opposite()]);
 
+        auto eventList = std::list<Event>();
+        auto firstEvent = crossingDiagonals.front();
 
-        eventList->push_back(a.target(), diagMap[a.opposite()], diagMap[a]);
+        eventList.push_front(Event{firstEvent.target(), diagMap[firstEvent], diagMap[firstEvent.opposite()],
+                                   segment_angle(firstEvent)});
+        eventList.push_front(Event{firstEvent.source(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
+                                   segment_angle(firstEvent)});
 
+        Event newEvent;
 
         for (auto it = crossingDiagonals.begin() + 2; it != crossingDiagonals.end(); it += 2) {
             cout << *it << endl;
-            if (!eventList->in_list(it->target())) {
-                cout << "APPEARANCE: " << it->target() << endl;
-                eventList->insert_after(eventList->head, it->target(), eventList->head->next->top,
-                                        eventList->head->next->bot);
-            } else if (!eventList->in_list(it->source())) {
-                cout << "APPEARANCE: " << it->source() << endl;
-                eventList->insert_after(eventList->head, it->source(), eventList->head->next->top,
-                                        eventList->head->next->bot);
+            newEvent = {it->target(), diagMap[*it], diagMap[it->opposite()], segment_angle(*it)};
+
+            auto in_list = find(eventList.begin(), eventList.end(), newEvent);
+            if (in_list == eventList.end()) {
+                cout << "APPEARANCE: " << newEvent.target << endl;
+                eventList.insert(++eventList.begin(), newEvent);
+                calculate_trapezoids(eventList);
             } else {
-                auto s = *it;
-
-                auto doneTarget = find_if(it + 2, crossingDiagonals.end(),
-                                          [&s](const Segment_2 &A) {
-                                              return s.target() == A.target() || s.target() == A.source();
-                                          });
-
-                auto doneSource = find_if(it + 2, crossingDiagonals.end(),
-                                          [&s](const Segment_2 &A) {
-                                              return s.source() == A.target() || s.source() == A.source();
-                                          });
-
-                if (doneSource == crossingDiagonals.end()) {
-                    cout << "DISAPPEARANCE: " << it->source() << endl;
-
-
-                    eventList->delete_val(it->source());
-
-                } else if (doneTarget == crossingDiagonals.end()) {
-                    cout << "DISAPPEARANCE target: " << it->source() << endl;
-
-
-                    eventList->delete_val(it->target());
-
+                if (newEvent.target == eventList.front().target || newEvent.target == eventList.back().target) {
+                    newEvent.target = it->source();
+                    cout << "DISAPPEARANCE" << endl;
+                    eventList.erase(find(eventList.begin(), eventList.end(), newEvent));
                 } else {
                     cout << "SWAP" << endl;
+                    iter_swap(in_list, prev(in_list));
                 }
             }
-            eventList->forward_traverse();
         }
-
     }
 };
 
