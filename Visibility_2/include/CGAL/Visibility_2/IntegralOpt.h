@@ -9,14 +9,14 @@ public:
   static T Compute(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
                    T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y) {
 
-    std::cout << "T0: " << "(" << T0X << "," << T0Y << ")" << std::endl;
-    std::cout << "T1: " << "(" << T1X << "," << T1Y << ")" << std::endl;
-    std::cout << "B0: " << "(" << B0X << "," << B0Y << ")" << std::endl;
-    std::cout << "B1: " << "(" << B1X << "," << B1Y << ")" << std::endl;
-    std::cout << "PL: " << "(" << PLX << "," << PLX << ")" << std::endl;
-    std::cout << "PR: " << "(" << PRX << "," << PRY << ")" << std::endl;
-    std::cout << "V0: " << "(" << V0X << "," << V0Y << ")" << std::endl;
-    std::cout << "V1: " << "(" << V1X << "," << V1Y << ")" << std::endl;
+//    std::cout << "T0: " << "(" << T0X << "," << T0Y << ")" << std::endl;
+//    std::cout << "T1: " << "(" << T1X << "," << T1Y << ")" << std::endl;
+//    std::cout << "B0: " << "(" << B0X << "," << B0Y << ")" << std::endl;
+//    std::cout << "B1: " << "(" << B1X << "," << B1Y << ")" << std::endl;
+//    std::cout << "PL: " << "(" << PLX << "," << PLX << ")" << std::endl;
+//    std::cout << "PR: " << "(" << PRX << "," << PRY << ")" << std::endl;
+//    std::cout << "V0: " << "(" << V0X << "," << V0Y << ")" << std::endl;
+//    std::cout << "V1: " << "(" << V1X << "," << V1Y << ")" << std::endl;
 
     T t1 = B0X * T0Y;
     T t2 = B0X * T1Y;
@@ -46,15 +46,11 @@ public:
     T t27 = V0X * T1Y;
     T t28 = T1Y * V1X;
     T t30 = 0.1e1 / (t21 - t22 - t23 + t24 - t25 + t26 + t27 - t28);
-    cout << t30 << endl;
     T t31 = B0X * t30;
     T t32 = B0Y * B1X;
     T t34 = t32 * t31 * t20;
-    cout << t34 << endl;
     T t35 = -t22 + t24 + t26 - t28;
-    cout << t35 << endl;
     T t36 = std::log(t35);
-    cout << t36 << endl;
     T t37 = t36 * B1Y;
     T t38 = PLY * PLY;
     T t39 = T1X * T1X;
