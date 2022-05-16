@@ -71,6 +71,7 @@ private:
 
     struct Corner {
         Point_2 target;
+        Point_2 source;
         Segment_2 top;
         Segment_2 bot;
         Kernel::Direction_2 direction{};
@@ -79,6 +80,62 @@ private:
             return this->target == A.target;
         }
     };
+
+
+    static Kernel::FT calc(Corner &c1, Corner &c2, Kernel::Direction_2 &newDir) {
+        Kernel::FT PLX = c1.target.x();
+        Kernel::FT PLY = c1.target.y();
+
+        auto diffX = PLX;
+        PLX = 0;
+
+
+        Kernel::FT PRX = c2.target.x() - diffX;
+        Kernel::FT PRY = c2.target.y();
+
+        Kernel::FT TOP0X = c2.top.source().x() - diffX;
+        Kernel::FT TOP0Y = c2.top.source().y();
+        Kernel::FT TOP1X = c2.top.target().x() - diffX;
+        Kernel::FT TOP1Y = c2.top.target().y();
+
+        Kernel::FT BOT0X = c2.bot.source().x() - diffX;
+        Kernel::FT BOT0Y = c2.bot.source().y();
+        Kernel::FT BOT1X = c2.bot.target().x() - diffX;
+        Kernel::FT BOT1Y = c2.bot.target().y();
+
+
+        Kernel::FT V0X = c1.direction.dx();
+        Kernel::FT V0Y = c1.direction.dy();
+        Kernel::FT V1X = newDir.dx();
+        Kernel::FT V1Y = newDir.dy();
+
+
+        using boost::math::quadrature::trapezoidal;
+        auto f = [&](Kernel::FT rho) {
+            if (rho == 0.0) {
+                return rho;
+            } else {
+                return CGAL::abs(
+                        Integral<Kernel::FT>::Compute(TOP0X, TOP0Y, TOP1X, TOP1Y, BOT0X, BOT0Y, BOT1X, BOT1Y, PLX,
+                                                      PLY,
+                                                      PRX, PRY, V0X, V0Y, V1X, V1Y, rho));
+            }
+
+        };
+
+        cout << "TOP0: " << "(" << TOP0X << "," << TOP0Y << ")" << endl;
+        cout << "TOP1: " << "(" << TOP1X << "," << TOP1Y << ")" << endl;
+        cout << "BOT0: " << "(" << BOT0X << "," << BOT0Y << ")" << endl;
+        cout << "BOT1: " << "(" << BOT1X << "," << BOT1Y << ")" << endl;
+        cout << "PL: " << "(" << PLX << "," << PLY << ")" << endl;
+        cout << "PR: " << "(" << PRX << "," << PRY << ")" << endl;
+        cout << "V0: " << "(" << V0X << "," << V0Y << ")" << endl;
+        cout << "V1: " << "(" << V1X << "," << V1Y << ")" << endl;
+
+        Kernel::FT intRes = trapezoidal(f, 0.0, 1.0);
+        cout << intRes << endl;
+        return intRes;
+    }
 
     static Kernel::FT
     calculate_trapezoids(std::list<Corner> &list, Kernel::Direction_2 &oldDirection,
@@ -89,20 +146,18 @@ private:
             Kernel::FT PLX = CGAL::to_double(prev(it)->target.x());
             Kernel::FT PLY = CGAL::to_double(prev(it)->target.y());
 
-            auto diff = PLX;
-            PLX = 0;
 
-            Kernel::FT PRX = CGAL::to_double((it)->target.x()) - diff;
+            Kernel::FT PRX = CGAL::to_double((it)->target.x());
             Kernel::FT PRY = CGAL::to_double((it)->target.y());
 
-            Kernel::FT TOP0X = CGAL::to_double((it)->top.source().x()) - diff;
+            Kernel::FT TOP0X = CGAL::to_double((it)->top.source().x());
             Kernel::FT TOP0Y = CGAL::to_double((it)->top.source().y());
-            Kernel::FT TOP1X = CGAL::to_double((it)->top.target().x()) - diff;
+            Kernel::FT TOP1X = CGAL::to_double((it)->top.target().x());
             Kernel::FT TOP1Y = CGAL::to_double((it)->top.target().y());
 
-            Kernel::FT BOT0X = CGAL::to_double((it)->bot.source().x()) - diff;
+            Kernel::FT BOT0X = CGAL::to_double((it)->bot.source().x());
             Kernel::FT BOT0Y = CGAL::to_double((it)->bot.source().y());
-            Kernel::FT BOT1X = CGAL::to_double((it)->bot.target().x()) - diff;
+            Kernel::FT BOT1X = CGAL::to_double((it)->bot.target().x());
             Kernel::FT BOT1Y = CGAL::to_double((it)->bot.target().y());
 
 
@@ -282,11 +337,11 @@ private:
     }
 
 
-    tuple<vector<Segment_2>, vector<Segment_2>, vector<Segment_2>>
+    tuple<vector<Segment_2>, deque<Segment_2>, vector<Segment_2>>
     find_diagonal_subsets(BinaryTree<CTP>::Node *leftNode, BinaryTree<CTP>::Node *rightNode) {
         vector<Segment_2> leftDiagonals;
         vector<Segment_2> rightDiagonals;
-        vector<Segment_2> crossingDiagonals;
+        deque<Segment_2> crossingDiagonals;
 
 
         unordered_set<Point_2, PointHashFunction> leftPoints;
@@ -517,119 +572,251 @@ private:
 //            cout << a << endl;
 //        }
 
+        Kernel::FT final_res = 0;
+
+
         auto eventList = std::list<Corner>();
-        auto firstEvent = crossingDiagonals.front();
 
 
-        eventList.push_front(Corner{firstEvent.target(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
-                                    firstEvent.direction()});
-        eventList.push_back(Corner{firstEvent.source(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
-                                   firstEvent.direction()});
+        auto f = crossingDiagonals.front();
+        crossingDiagonals.pop_front();
+        auto b = crossingDiagonals.front();
+        crossingDiagonals.pop_front();
 
-        Kernel::FT res = 0;
-        Corner newEvent;
-        auto oldDirection = firstEvent.opposite().direction();
-
-
-        auto lastPlaced = (eventList.begin());
-
-        for (auto it = crossingDiagonals.begin() + 2; it != crossingDiagonals.end(); it += 2) {
-
-            bool onTop = true;
-            auto s = *it;
-            if (it->direction() > next(it)->direction()) {
-                onTop = false;
-                s = *next(it);
-            }
-
-            cout << *it << endl;
-            auto opp = find(eventList.begin(), eventList.end(), Corner{it->source()});
-
-
-            newEvent = {it->target(), diagMap[s], diagMap[s.opposite()], s.direction()};
-
-
-            auto in_list = find(eventList.begin(), eventList.end(), newEvent);
-
-            if (in_list == eventList.end() && opp != eventList.end())
-                newEvent.target = it->target();
-
-
-            if (in_list == eventList.end()) {
-                cout << "APPEARANCE: " << newEvent.target << endl;
-
-                res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-
-
-                lastPlaced = (eventList.insert(next(lastPlaced), newEvent));
-
-
-                if (opp != eventList.end()) {
-                    opp->top = newEvent.top;
-                    opp->bot = newEvent.bot;
-                }
-                if (onTop)
-                    prev(lastPlaced)->top = lastPlaced->top;
-                else
-                    (lastPlaced)->bot = prev(lastPlaced)->bot;
-
-            } else if (opp == eventList.end()) {
-                newEvent.target = it->source();
-                cout << "APPEARANCE: " << newEvent.target << endl;
-
-                res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-
-
-                lastPlaced = (eventList.insert(next(lastPlaced), newEvent));
-
-
-                if (opp != eventList.end()) {
-                    opp->top = newEvent.top;
-                    opp->bot = newEvent.bot;
-                }
-                if (onTop)
-                    prev(lastPlaced)->top = lastPlaced->top;
-            } else {
-                if (newEvent.target == eventList.front().target || newEvent.target == eventList.back().target) {
-                    newEvent.target = it->source();
-
-                    cout << "DISAPPEARANCE" << endl;
-                    res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-
-                    auto finished = find(eventList.begin(), eventList.end(), newEvent);
-
-
-                    if (opp != eventList.end()) {
-                        if (!onTop) {
-                            next(finished)->top = finished->top;
-                            next(finished)->bot = finished->bot;
-                        } else {
-                            prev(finished)->top = finished->top;
-                            prev(finished)->bot = finished->bot;
-                        }
-                    }
-
-                    eventList.erase(finished);
-
-
-                } else {
-                    cout << "SWAP" << endl;
-                    res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-
-                    next(in_list)->top = in_list->top;
-                    in_list->bot = next(in_list, 2)->bot;
-                    iter_swap(in_list, next(in_list));
-                }
-            }
-            oldDirection = newEvent.direction;
+        if (f.direction() < b.direction()) {
+            std::swap(f, b);
         }
 
-        cout << "END" << endl;
-        iter_swap(eventList.begin(), next(eventList.begin()));
-        //res += calculate_trapezoids(eventList, oldDirection, eventList.back().direction);
 
-        cout << "FINAL RES: " << res <<
-             endl;
+        eventList.push_front({f.target(), f.source(), diagMap[b], diagMap[f], b.direction()});
+        eventList.push_back({b.target(), b.source(), diagMap[b], diagMap[f], b.direction()});
+
+
+        Corner newCorner;
+
+        auto lastPlaced = eventList.begin();
+
+        for (auto crossingDiagonal = crossingDiagonals.begin();
+             crossingDiagonal != crossingDiagonals.end(); crossingDiagonal++) {
+
+
+            auto s = crossingDiagonal->direction() < crossingDiagonal->opposite().direction() ? *crossingDiagonal
+                                                                                              : crossingDiagonal->opposite();
+
+
+            newCorner = {crossingDiagonal->target(), crossingDiagonal->source(), diagMap[s],
+                         diagMap[s.opposite()],
+                         s.direction()};
+            auto target_in_list = find(eventList.begin(), eventList.end(), newCorner);
+            auto source_in_list = find(eventList.begin(), eventList.end(), Corner{newCorner.source});
+
+            if (eventList.size() < 2) {
+                if (newCorner.direction.dx() > 0) {
+                    lastPlaced = eventList.insert(next(lastPlaced), newCorner);
+                } else {
+                    lastPlaced = eventList.insert(lastPlaced, newCorner);
+                }
+            } else {
+                if (target_in_list == eventList.end()) {
+                    cout << "APPEARANCE: " << newCorner.target << endl;
+
+                    for (auto &a: eventList) {
+                        cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                    }
+
+                    cout << "Last placed: " << lastPlaced->target << endl;
+                    final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+
+
+                    lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
+
+                    prev(lastPlaced)->direction = lastPlaced->direction;
+
+                    if(source_in_list != eventList.end()){
+                        source_in_list->top = newCorner.top;
+                        source_in_list->bot = newCorner.bot;
+                    }
+
+                    if(crossingDiagonal->direction().dy() > 0){
+                        prev(lastPlaced)->top = lastPlaced->top;
+                    } else{
+                        lastPlaced->bot = prev(lastPlaced)->bot;
+                    }
+
+
+
+                    for (auto &a: eventList) {
+                        cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                    }
+                    cout << "Last placed: " << lastPlaced->target << endl;
+
+                } else if (source_in_list != eventList.end()) {
+
+                    if (crossingDiagonal->source().y() < 0 && crossingDiagonal->target().y() > 0) {
+                        cout << "SWAP:" << crossingDiagonal->source() << "<->" << crossingDiagonal->target() << endl;
+                        for (auto &a: eventList) {
+                            cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                        }
+                        cout << "Last placed: " << lastPlaced->target << endl;
+
+                        final_res += calc(*prev(lastPlaced, 2), *prev(lastPlaced), newCorner.direction);
+                        final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction);
+                        final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+
+                        iter_swap(target_in_list, source_in_list);
+
+                        for (auto &a: eventList) {
+                            cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                        }
+                        cout << "Last placed: " << lastPlaced->target << endl;
+                    } else if (count_if(next(crossingDiagonal), crossingDiagonals.end(),
+                                        [&crossingDiagonal](const Segment_2 &A) {
+                                            return A.target() == crossingDiagonal->target();
+                                        }) == 0 && (crossingDiagonal->target() != diagonal.target() &&
+                                                    crossingDiagonal->target() != diagonal.source())) {
+                        cout << "DISAPPEARANCE: " << crossingDiagonal->target() << endl;
+
+
+                        for (auto &a: eventList) {
+                            cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                        }
+
+                        cout << "Last placed: " << lastPlaced->target << endl;
+                        cout << "Target in list: " << target_in_list->target << endl;
+
+                        final_res += calc(*prev(target_in_list,1), *prev(target_in_list,0), newCorner.direction);
+                        final_res += calc(*prev(target_in_list,0), *next(target_in_list), newCorner.direction);
+
+                        lastPlaced = prev(target_in_list);
+                        eventList.erase(target_in_list);
+
+                        for (auto &a: eventList) {
+                            cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                        }
+
+                        cout << "Last placed: " << lastPlaced->target << endl;
+                    }
+                }
+            }
+
+        }
+        cout << "END" << endl;
+        final_res += calc(*(lastPlaced), *next(lastPlaced), eventList.back().direction);
+
+        cout << "Final: " << final_res << endl;
+//        auto firstEvent = crossingDiagonals.front();
+//
+//
+//        eventList.push_front(Corner{firstEvent.target(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
+//                                    firstEvent.direction()});
+//        eventList.push_back(Corner{firstEvent.source(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
+//                                   firstEvent.direction()});
+//
+//        Kernel::FT res = 0;
+//        Corner newEvent;
+//        auto oldDirection = firstEvent.opposite().direction();
+//
+//
+//        auto lastPlaced = (eventList.begin());
+//
+//        for (auto it = crossingDiagonals.begin() + 2; it != crossingDiagonals.end(); it += 2) {
+//
+//            bool onTop = true;
+//            auto s = *it;
+//            if (it->direction() > next(it)->direction()) {
+//                onTop = false;
+//                s = *next(it);
+//            }
+//
+//            cout << *it << endl;
+//            auto opp = find(eventList.begin(), eventList.end(), Corner{it->source()});
+//
+//
+//            newEvent = {it->target(), diagMap[s], diagMap[s.opposite()], s.direction()};
+//
+//
+//            auto in_list = find(eventList.begin(), eventList.end(), newEvent);
+//
+//            if (in_list == eventList.end() && opp != eventList.end())
+//                newEvent.target = it->target();
+//
+//
+//            if (in_list == eventList.end()) {
+//                cout << "APPEARANCE: " << newEvent.target << endl;
+//
+//                res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
+//
+//
+//                lastPlaced = (eventList.insert(next(lastPlaced), newEvent));
+//
+//
+//                if (opp != eventList.end()) {
+//                    opp->top = newEvent.top;
+//                    opp->bot = newEvent.bot;
+//                }
+//                if (onTop)
+//                    prev(lastPlaced)->top = lastPlaced->top;
+//                else
+//                    (lastPlaced)->bot = prev(lastPlaced)->bot;
+//
+//            } else if (opp == eventList.end()) {
+//                newEvent.target = it->source();
+//                cout << "APPEARANCE: " << newEvent.target << endl;
+//
+//                res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
+//
+//
+//                lastPlaced = (eventList.insert(next(lastPlaced), newEvent));
+//
+//
+//                if (opp != eventList.end()) {
+//                    opp->top = newEvent.top;
+//                    opp->bot = newEvent.bot;
+//                }
+//                if (onTop)
+//                    prev(lastPlaced)->top = lastPlaced->top;
+//            } else {
+//                if (newEvent.target == eventList.front().target || newEvent.target == eventList.back().target) {
+//                    newEvent.target = it->source();
+//
+//                    cout << "DISAPPEARANCE" << endl;
+//                    res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
+//
+//                    auto finished = find(eventList.begin(), eventList.end(), newEvent);
+//
+//
+//                    if (opp != eventList.end()) {
+//                        if (!onTop) {
+//                            next(finished)->top = finished->top;
+//                            next(finished)->bot = finished->bot;
+//                        } else {
+//                            prev(finished)->top = finished->top;
+//                            prev(finished)->bot = finished->bot;
+//                        }
+//                    }
+//
+//                    eventList.erase(finished);
+//
+//
+//                } else {
+//                    cout << "SWAP" << endl;
+//                    res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
+//
+//                    next(in_list)->top = in_list->top;
+//                    in_list->bot = next(in_list, 2)->bot;
+//                    iter_swap(in_list, next(in_list));
+//                }
+//            }
+//            oldDirection = newEvent.direction;
+//        }
+//
+//        cout << "END" << endl;
+//        iter_swap(eventList.begin(), next(eventList.begin()));
+//        //res += calculate_trapezoids(eventList, oldDirection, eventList.back().direction);
+//
+//        cout << "FINAL RES: " << res <<
+//             endl;
+
     }
 
 };

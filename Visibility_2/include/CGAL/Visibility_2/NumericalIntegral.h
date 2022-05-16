@@ -27,9 +27,9 @@ public:
 //        std::cout << "V1: "
 //                  << "(" << V1X << "," << V1Y << ")" << std::endl;
 
-        T t1 = V0Y * V0X;
-        T t2 = V1Y * t1;
-        T t3 = (T0Y - T1Y);
+        T t1 = (int) ((double) V0Y * (double) V0X);
+        T t2 = (int) ((double) V1Y * (double) t1);
+        T t3 = (int) ((double) T0Y - (double) T1Y);
         T t5 = 1 - rho;
         T t6 = t5 * V0X;
         T t7 = V1X * rho;
@@ -44,10 +44,10 @@ public:
         T t20 = t19 * V0X;
         T t22 = V0Y * V0Y;
         T t23 = V1X * t22;
-        T t25 = V0Y * V1X;
+        T t25 = V1X * V0Y;
         T t33 = -t16 * t3 * V1Y * t1 + t17 * V1Y * t25 + t16 * t3 * t23 + t17 * t2 - t17 * t20 - t17 * t23;
-        T t34 = B0Y - B1Y;
-        T t35 = t34 * t34;
+        T t34 = (int) ((double) B0Y - (double) B1Y);
+        T t35 = (int) ((double) t34 * (double) t34);
         T t40 = t8 * t34 - t13 * (-B0X + B1X);
         T t41 = t40 * t40;
         T t42 = 1 / t41;
@@ -55,7 +55,7 @@ public:
         T t45 = rho * t20;
         T t46 = rho * t23;
         T t47 = t12 * t25;
-        T t48 = -t44 + t45 + t46 - t47 + t2 - t23;
+        T t48 = t44 - t45 - t46 + t47 - t2 + t23;
         T t49 = t3 * t3;
         T t50 = t49 * t48;
         T t51 = t15 * t15;
@@ -68,8 +68,8 @@ public:
         T t65 = t13 * t13;
         T t66 = t65 * t65;
         T t67 = 1 / t66;
-        T t69 = PLY * PLY;
-        T t70 = t69 * t69;
+        T t69 = (int) ((double) PLY * (double) PLY);
+        T t70 = (int) ((double) t69 * (double) t69);
         T t71 = t8 * t8;
         T t72 = t71 * t71;
         T t80 = T0X * T1Y - T0Y * T1X;
@@ -87,24 +87,16 @@ public:
         T t142 = t80 * t80;
         T t143 = t142 * t48;
         T t168 = t82 * t8 * PLY + t82 * t62;
-        T t179 = ((-t67 * t72 * t70 + t67 * t64) * (-t42 * t35 * t33 + t54 * t53 * t50)) / 0.8e1 +
-                 ((t124 * t71 * t8 * t69 * PLY + t124 * t63 * t62) *
-                  (-t107 * t42 * (-2 * t102 * t99 * t33 + t65 * t35 * t94) -
-                   t54 * (2 * t53 * t82 * t3 * t13 * t109 + t13 * t116 * t82 * t50))) / 0.6e1 +
-                 ((-t107 * t71 * t69 + t107 * t63) * (-t107 * t42 * (-2 * t102 * t99 * t94 + t65 * t136 * t33) - t54 *
-                                                                                                                 (-2 *
-                                                                                                                  t116 *
-                                                                                                                  t107 *
-                                                                                                                  t3 *
-                                                                                                                  t65 *
-                                                                                                                  t109 -
-                                                                                                                  t34 *
-                                                                                                                  t107 *
-                                                                                                                  t52 *
-                                                                                                                  t65 *
-                                                                                                                  t143))) /
-                 0.4e1 - (t168 * t107 * t42 * t65 * t136 * t94) / 0.2e1 -
-                 (t168 * t54 * t99 * t124 * t52 * t123 * t143) / 0.2e1;
+        T t179 = (double) ((-t67 * t72 * t70 + t67 * t64) * (-t42 * t35 * t33 + t54 * t53 * t50)) / 0.8e1 +
+                 (double) ((t124 * t71 * t8 * t69 * PLY + t124 * t63 * t62) *
+                           (-t107 * t42 * (-2 * t102 * t99 * t33 + t65 * t35 * t94) -
+                            t54 * (2 * t53 * t82 * t3 * t13 * t109 + t13 * t116 * t82 * t50))) / 0.6e1 +
+                 (double) ((-t107 * t71 * t69 + t107 * t63) *
+                           (-t107 * t42 * (-2 * t102 * t99 * t94 + t65 * t136 * t33) -
+                            t54 * (-2 * t116 * t107 * t3 * t65 * t109 - t34 * t107 * t52 * t65 * t143))) / 0.4e1 -
+                 (double) (t168 * t107 * t42 * t65 * t136 * t94) / 0.2e1 -
+                 (double) (t168 * t54 * t99 * t124 * t52 * t123 * t143) / 0.2e1;
+
         return t179;
     };
 
