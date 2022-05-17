@@ -71,7 +71,6 @@ private:
 
     struct Corner {
         Point_2 target;
-        Point_2 source;
         Segment_2 top;
         Segment_2 bot;
         Kernel::Direction_2 direction{};
@@ -132,7 +131,7 @@ private:
         cout << "V0: " << "(" << V0X << "," << V0Y << ")" << endl;
         cout << "V1: " << "(" << V1X << "," << V1Y << ")" << endl;
 
-        Kernel::FT intRes = trapezoidal(f, 0.0, 1.0-1e-10);
+        Kernel::FT intRes = trapezoidal(f, 0.0, 1.0 - 1e-10);
 //        Kernel::FT intRes = Integral<Kernel::FT>::Compute(TOP0X, TOP0Y, TOP1X, TOP1Y, BOT0X, BOT0Y, BOT1X, BOT1Y, PLX,
 //                                                          PLY, PRX, PRY, V0X, V0Y, V1X, V1Y);
         cout << intRes << endl;
@@ -495,9 +494,9 @@ private:
 //            cout << a.first << " : " << a.second << endl;
 //        }
 
-//        for (auto a: crossingDiagonals) {
-//            cout << a << endl;
-//        }
+        for (auto &a: crossingDiagonals) {
+            cout << a << endl;
+        }
 
         Kernel::FT final_res = 0;
         auto eventList = std::list<Corner>();
@@ -508,13 +507,13 @@ private:
         auto b = crossingDiagonals.front();
         crossingDiagonals.pop_front();
 
-        if (f.direction() < b.direction()) {
+        if (f.target().x() > b.target().x()) {
             std::swap(f, b);
         }
 
 
-        eventList.push_front({f.target(), f.source(), diagMap[b], diagMap[f], b.direction()});
-        eventList.push_back({b.target(), b.source(), diagMap[b], diagMap[f], b.direction()});
+        eventList.push_front({f.target(), diagMap[b], diagMap[f], b.direction()});
+        eventList.push_back({b.target(), diagMap[b], diagMap[f], b.direction()});
 
 
         auto lastPlaced = eventList.begin();
@@ -522,134 +521,172 @@ private:
         for (auto crossingDiagonal = crossingDiagonals.begin();
              crossingDiagonal != crossingDiagonals.end(); crossingDiagonal++) {
 
+            if (crossingDiagonal->direction() > crossingDiagonal->opposite().direction()) {
+                continue;
+            }
 
-            auto s = crossingDiagonal->direction() < crossingDiagonal->opposite().direction() ? *crossingDiagonal
-                                                                                              : crossingDiagonal->opposite();
 
-
-            Corner newCorner = {crossingDiagonal->target(), crossingDiagonal->source(), diagMap[s],
-                                diagMap[s.opposite()],
-                                s.direction()};
+            Corner newCorner = {crossingDiagonal->target(), diagMap[*crossingDiagonal],
+                                diagMap[crossingDiagonal->opposite()],
+                                crossingDiagonal->direction()};
             auto target_in_list = find(eventList.begin(), eventList.end(), newCorner);
-            auto source_in_list = find(eventList.begin(), eventList.end(), Corner{newCorner.source});
+            auto source_in_list = find(eventList.begin(), eventList.end(), Corner{crossingDiagonal->source()});
 
 
-            bool onTop = crossingDiagonal->direction().dy() > 0;
+            cout << *crossingDiagonal << endl;
+            if (target_in_list == eventList.end()) {
+                cout << "APPEARANCE target: " << newCorner.target << endl;
 
-
-            if (eventList.size() < 2) {
-                if (newCorner.direction.dx() > 0) {
-                    lastPlaced = eventList.insert(next(lastPlaced), newCorner);
-                } else {
-                    lastPlaced = eventList.insert(lastPlaced, newCorner);
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << endl;
                 }
+
+                cout << "Last placed: " << lastPlaced->target << endl;
+                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+
+                lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
+
+                prev(lastPlaced)->direction = newCorner.direction;
+                lastPlaced->direction = newCorner.direction;
+
+                if (source_in_list != eventList.end()) {
+                    source_in_list->top = newCorner.top;
+                    source_in_list->bot = newCorner.bot;
+                }
+
+                prev(lastPlaced)->top = lastPlaced->top;
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                }
+                cout << "Last placed: " << lastPlaced->target << endl;
+
+            } else if (source_in_list == eventList.end()) {
+                newCorner.target = crossingDiagonal->source();
+                cout << "APPEARANCE source: " << newCorner.target << endl;
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                }
+                cout << "Last placed: " << lastPlaced->target << endl;
+                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+
+                lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
+
+                prev(lastPlaced)->direction = newCorner.direction;
+                lastPlaced->direction = newCorner.direction;
+
+                if (target_in_list != eventList.end()) {
+                    target_in_list->top = newCorner.top;
+                    target_in_list->bot = newCorner.bot;
+                }
+
+                lastPlaced->bot = prev(lastPlaced)->bot;
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << endl;
+                }
+                cout << "Last placed: " << lastPlaced->target << endl;
+
+            } else if (find_if(next(crossingDiagonal), crossingDiagonals.end(),
+                               [&](const Segment_2 &A) {
+                                   return (A.target() == crossingDiagonal->target() ||
+                                           A.source() == crossingDiagonal->target()) &&
+                                          A.opposite() != *crossingDiagonal;
+                               }) == crossingDiagonals.end() &&
+                       crossingDiagonal->target() != diagonal.target() &&
+                       crossingDiagonal->target() != diagonal.source()) {
+                cout << "DISAPPEARANCE target: " << crossingDiagonal->target() << endl;
+                cout << "Last placed" << lastPlaced->target << endl;
+                cout << "Target in: " << target_in_list->target << endl;
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
+                }
+
+                final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction);
+                final_res += calc(*(target_in_list), *next(target_in_list, 1), newCorner.direction);
+
+                lastPlaced = prev(target_in_list);
+
+                prev(target_in_list)->direction = newCorner.direction;
+                next(target_in_list)->direction = newCorner.direction;
+
+                next(target_in_list)->top = prev(target_in_list)->top;
+
+                eventList.erase(target_in_list);
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
+                }
+                cout << "Last placed: " << lastPlaced->target << endl;
+
+            } else if (find_if(next(crossingDiagonal), crossingDiagonals.end(),
+                               [&crossingDiagonal](const Segment_2 &A) {
+                                   return (A.target() == crossingDiagonal->source() ||
+                                           A.source() == crossingDiagonal->source()) &&
+                                          A.opposite() != *crossingDiagonal;
+                               }) == crossingDiagonals.end() && crossingDiagonal->source() != diagonal.target() &&
+                       crossingDiagonal->source() != diagonal.source()) {
+                cout << "DISAPPEARANCE source: " << crossingDiagonal->source() << endl;
+                cout << "Last placed" << lastPlaced->target << endl;
+
+                cout << "Target in: " << source_in_list->target << endl;
+
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
+                }
+
+                final_res += calc(*prev(source_in_list), *(source_in_list), newCorner.direction);
+                final_res += calc(*(source_in_list), *next(source_in_list, 1), newCorner.direction);
+
+                lastPlaced = prev(source_in_list);
+
+
+                lastPlaced->direction = newCorner.direction;
+                next(lastPlaced)->direction = newCorner.direction;
+
+                source_in_list->bot = next(source_in_list)->bot;
+
+                eventList.erase(source_in_list);
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
+                }
+
+                cout << "Last placed: " << lastPlaced->target << endl;
             } else {
-                if (target_in_list == eventList.end()) {
-                    cout << "APPEARANCE: " << newCorner.target << endl;
-
-                    for (auto &a: eventList) {
-                        cout << a.target << " : " << a.top << " : " << a.bot << endl;
-                    }
-
-                    cout << "Last placed: " << lastPlaced->target << endl;
-                    final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
 
 
-                    lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
-
-                    prev(lastPlaced)->direction = newCorner.direction;
-                    lastPlaced -> direction = newCorner.direction;
-
-                    if (source_in_list != eventList.end()) {
-                        source_in_list->top = newCorner.top;
-                        source_in_list->bot = newCorner.bot;
-                    }
-
-                    if (onTop) {
-                        prev(lastPlaced)->top = lastPlaced->top;
-                    } else {
-                        lastPlaced->bot = prev(lastPlaced)->bot;
-                    }
-
-
-                    for (auto &a: eventList) {
-                        cout << a.target << " : " << a.top << " : " << a.bot << endl;
-                    }
-                    cout << "Last placed: " << lastPlaced->target << endl;
-
-                } else if (source_in_list != eventList.end()) {
-
-                    if (crossingDiagonal->source().y() < 0 && crossingDiagonal->target().y() > 0) {
-                        cout << "SWAP:" << crossingDiagonal->source() << "<->" << crossingDiagonal->target() << endl;
-                        for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << endl;
-                        }
-                        cout << "Last placed: " << lastPlaced->target << endl;
-                        cout << "TARGET IN LIST: " << target_in_list->target << endl;
-
-                        final_res += calc(*prev(lastPlaced, 2), *prev(lastPlaced), newCorner.direction);
-                        final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction);
-                        final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
-
-                        if (target_in_list->target.y() >= next(target_in_list)->target.y()){
-                            (target_in_list)->top = prev(target_in_list)->top;
-                            next(target_in_list, 0)->bot = next(target_in_list, 2)->bot;
-                        } else{
-                            target_in_list->bot = next(target_in_list,2)->bot;
-                            next(target_in_list)->top = target_in_list->top;
-                        }
-
-//                        std::swap(target_in_list->direction, next(target_in_list)->direction);
-                        prev(target_in_list,2)-> direction = newCorner.direction;
-                        prev(target_in_list)-> direction = newCorner.direction;
-                        target_in_list->direction = newCorner.direction;
-                        next(target_in_list)->direction = newCorner.direction;
-
-                        iter_swap(target_in_list, source_in_list);
-                        lastPlaced = prev(lastPlaced);
-
-                        for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
-                        }
-                        cout << "Last placed: " << lastPlaced->target << endl;
-                    } else if (count_if(next(crossingDiagonal), crossingDiagonals.end(),
-                                        [&crossingDiagonal](const Segment_2 &A) {
-                                            return A.target() == crossingDiagonal->target();
-                                        }) == 0 && (crossingDiagonal->target() != diagonal.target() &&
-                                                    crossingDiagonal->target() != diagonal.source())) {
-                        cout << "DISAPPEARANCE: " << crossingDiagonal->target() << endl;
-
-
-                        for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
-                        }
-
-                        final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction);
-                        final_res += calc(*(target_in_list), *next(target_in_list, 1), newCorner.direction);
-
-                        lastPlaced = prev(target_in_list);
-
-
-                        lastPlaced->direction = newCorner.direction;
-                        next(lastPlaced)->direction = newCorner.direction;
-
-
-                        if (onTop) {
-                            prev(target_in_list)->top = target_in_list->top;
-                            next(target_in_list)->top = newCorner.top;
-                        } else
-                            target_in_list->bot = next(target_in_list)->bot;
-
-
-                        eventList.erase(target_in_list);
-
-                        for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
-                        }
-
-                        cout << "Last placed: " << lastPlaced->target << endl;
-                    }
+                cout << "SWAP:" << crossingDiagonal->source() << "<->" << crossingDiagonal->target() << endl;
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << endl;
                 }
+                cout << "Last placed: " << lastPlaced->target << endl;
+                cout << "TARGET IN LIST: " << target_in_list->target << endl;
+
+                final_res += calc(*prev(lastPlaced, 2), *prev(lastPlaced), newCorner.direction);
+                final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction);
+                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+
+                prev(target_in_list, 2)->direction = newCorner.direction;
+                prev(target_in_list)->direction = newCorner.direction;
+                target_in_list->direction = newCorner.direction;
+                next(target_in_list)->direction = newCorner.direction;
+
+
+                target_in_list->bot = next(source_in_list)->bot;
+                source_in_list->top = target_in_list->top;
+
+                iter_swap(target_in_list, source_in_list);
+                lastPlaced = prev(lastPlaced);
+
+                for (auto &a: eventList) {
+                    cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
+                }
+                cout << "Last placed: " << lastPlaced->target << endl;
+
             }
         }
         cout << "END" << endl;
@@ -674,10 +711,10 @@ int main() {
 //    polygon.push_back(Point_2{1, 2});
 
     polygon.push_back(Point_2{0, 0});
-    polygon.push_back(Point_2{1, -2.0});
+    polygon.push_back(Point_2{2, -2.0});
     polygon.push_back(Point_2{2, 0});
-    polygon.push_back(Point_2{2, 2});
-//
+    polygon.push_back(Point_2{1, 2});
+
 //    polygon.push_back(Point_2{0.0, 0.0});
 //    polygon.push_back(Point_2{-2.0, -1.0});
 //    polygon.push_back(Point_2{1.0, -1.0});
