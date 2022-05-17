@@ -76,21 +76,13 @@ private:
         Segment_2 bot;
         Kernel::Direction_2 direction{};
 
-//        Corner(Point_2 tar, Point_2 sor, Segment_2 to, Segment_2 bo, Kernel::Direction_2 dir) {
-//            target = tar;
-//            source = sor;
-//            top = to;
-//            bot = bo;
-//            direction = dir;
-//        }
-
         bool operator==(const Corner &A) const {
             return this->target == A.target;
         }
     };
 
 
-    static Kernel::FT calc(Corner c1, Corner c2, Kernel::Direction_2 newDir) {
+    static Kernel::FT calc(const Corner &c1, const Corner &c2, const Kernel::Direction_2 &newDir) {
         Kernel::FT PLX = c1.target.x();
         Kernel::FT PLY = c1.target.y();
 
@@ -140,84 +132,11 @@ private:
         cout << "V0: " << "(" << V0X << "," << V0Y << ")" << endl;
         cout << "V1: " << "(" << V1X << "," << V1Y << ")" << endl;
 
-        Kernel::FT intRes = trapezoidal(f, 0.0, 0.999999999999999);
+        Kernel::FT intRes = trapezoidal(f, 0.0, 1.0-1e-10);
+//        Kernel::FT intRes = Integral<Kernel::FT>::Compute(TOP0X, TOP0Y, TOP1X, TOP1Y, BOT0X, BOT0Y, BOT1X, BOT1Y, PLX,
+//                                                          PLY, PRX, PRY, V0X, V0Y, V1X, V1Y);
         cout << intRes << endl;
         return intRes;
-    }
-
-    static Kernel::FT
-    calculate_trapezoids(std::list<Corner> &list, Kernel::Direction_2 &oldDirection,
-                         Kernel::Direction_2 &newDirection) {
-        Kernel::FT res = 0;
-        for (auto it = next(list.begin()); it != (list.end()); it++) {
-
-            Kernel::FT PLX = CGAL::to_double(prev(it)->target.x());
-            Kernel::FT PLY = CGAL::to_double(prev(it)->target.y());
-
-
-            Kernel::FT PRX = CGAL::to_double((it)->target.x());
-            Kernel::FT PRY = CGAL::to_double((it)->target.y());
-
-            Kernel::FT TOP0X = CGAL::to_double((it)->top.source().x());
-            Kernel::FT TOP0Y = CGAL::to_double((it)->top.source().y());
-            Kernel::FT TOP1X = CGAL::to_double((it)->top.target().x());
-            Kernel::FT TOP1Y = CGAL::to_double((it)->top.target().y());
-
-            Kernel::FT BOT0X = CGAL::to_double((it)->bot.source().x());
-            Kernel::FT BOT0Y = CGAL::to_double((it)->bot.source().y());
-            Kernel::FT BOT1X = CGAL::to_double((it)->bot.target().x());
-            Kernel::FT BOT1Y = CGAL::to_double((it)->bot.target().y());
-
-
-            Kernel::FT V0X = CGAL::to_double(oldDirection.dx());
-            Kernel::FT V0Y = CGAL::to_double(oldDirection.dy());
-            Kernel::FT V1X = CGAL::to_double(newDirection.dx());
-            Kernel::FT V1Y = CGAL::to_double(newDirection.dy());
-
-
-            using boost::math::quadrature::trapezoidal;
-            auto f = [&](Kernel::FT rho) {
-                if (rho == 0.0) {
-                    return rho;
-                } else {
-                    return CGAL::abs(
-                            Integral<Kernel::FT>::Compute(TOP0X, TOP0Y, TOP1X, TOP1Y, BOT0X, BOT0Y, BOT1X, BOT1Y, PLX,
-                                                          PLY,
-                                                          PRX, PRY, V0X, V0Y, V1X, V1Y, rho));
-                }
-
-            };
-            Kernel::FT intRes = trapezoidal(f, 0.0, 0.99999999999);
-
-
-//            cout << it->top.target() << "--------" << it->top.source() << endl;
-//            cout << "         |                     |" << endl;
-//            cout << "         |                     |" << endl;
-//            cout << "         |                     |" << endl;
-//            cout << prev(it)->target << "--------" << it->target <<endl;
-//            cout << "         |                     |" << endl;
-//            cout << "         |                     |" << endl;
-//            cout << "         |                     |" << endl;
-//            cout << it->bot.source() << "--------" << it->bot.target() << endl;
-
-            cout << "TOP0: " << "(" << TOP0X << "," << TOP0Y << ")" << endl;
-            cout << "TOP1: " << "(" << TOP1X << "," << TOP1Y << ")" << endl;
-            cout << "BOT0: " << "(" << BOT0X << "," << BOT0Y << ")" << endl;
-            cout << "BOT1: " << "(" << BOT1X << "," << BOT1Y << ")" << endl;
-            cout << "PL: " << "(" << PLX << "," << PLY << ")" << endl;
-            cout << "PR: " << "(" << PRX << "," << PRY << ")" << endl;
-            cout << "V0: " << "(" << V0X << "," << V0Y << ")" << endl;
-            cout << "V1: " << "(" << V1X << "," << V1Y << ")" << endl;
-
-//            cout << TOP0X << "," << TOP0Y << "," << TOP1X << "," << TOP1Y << "," << BOT0X << "," << BOT0Y << ","
-//                 << BOT1X << "," << BOT1Y << "," << PLX << "," << PLY << "," << PRX << "," << PRY << "," << V0X << ","
-//                 << V0Y << "," << V1X << "," << V1Y << "," << start << "," << end << endl;
-            cout << "RES: " << intRes << endl;
-
-            res += intRes;
-        }
-
-        return res;
     }
 
     static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
@@ -581,8 +500,6 @@ private:
 //        }
 
         Kernel::FT final_res = 0;
-
-
         auto eventList = std::list<Corner>();
 
 
@@ -600,7 +517,6 @@ private:
         eventList.push_back({b.target(), b.source(), diagMap[b], diagMap[f], b.direction()});
 
 
-
         auto lastPlaced = eventList.begin();
 
         for (auto crossingDiagonal = crossingDiagonals.begin();
@@ -611,8 +527,9 @@ private:
                                                                                               : crossingDiagonal->opposite();
 
 
-            Corner newCorner = {crossingDiagonal->target(), crossingDiagonal->source(), diagMap[s], diagMap[s.opposite()],
-                         s.direction()};
+            Corner newCorner = {crossingDiagonal->target(), crossingDiagonal->source(), diagMap[s],
+                                diagMap[s.opposite()],
+                                s.direction()};
             auto target_in_list = find(eventList.begin(), eventList.end(), newCorner);
             auto source_in_list = find(eventList.begin(), eventList.end(), Corner{newCorner.source});
 
@@ -640,7 +557,8 @@ private:
 
                     lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
 
-                    prev(lastPlaced)->direction = lastPlaced->direction;
+                    prev(lastPlaced)->direction = newCorner.direction;
+                    lastPlaced -> direction = newCorner.direction;
 
                     if (source_in_list != eventList.end()) {
                         source_in_list->top = newCorner.top;
@@ -673,10 +591,17 @@ private:
                         final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction);
                         final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
 
+                        if (target_in_list->target.y() >= next(target_in_list)->target.y()){
+                            (target_in_list)->top = prev(target_in_list)->top;
+                            next(target_in_list, 0)->bot = next(target_in_list, 2)->bot;
+                        } else{
+                            target_in_list->bot = next(target_in_list,2)->bot;
+                            next(target_in_list)->top = target_in_list->top;
+                        }
 
-                        (target_in_list)->top = prev(target_in_list)->top;
-                        next(target_in_list, 0)->bot = next(target_in_list, 2)->bot;
 //                        std::swap(target_in_list->direction, next(target_in_list)->direction);
+                        prev(target_in_list,2)-> direction = newCorner.direction;
+                        prev(target_in_list)-> direction = newCorner.direction;
                         target_in_list->direction = newCorner.direction;
                         next(target_in_list)->direction = newCorner.direction;
 
@@ -684,7 +609,7 @@ private:
                         lastPlaced = prev(lastPlaced);
 
                         for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << " : "<< a.direction << endl;
+                            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
                         }
                         cout << "Last placed: " << lastPlaced->target << endl;
                     } else if (count_if(next(crossingDiagonal), crossingDiagonals.end(),
@@ -696,158 +621,42 @@ private:
 
 
                         for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << " : "<< a.direction << endl;
+                            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
                         }
 
                         final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction);
-                        final_res += calc(*(target_in_list), *next(target_in_list,1), newCorner.direction);
+                        final_res += calc(*(target_in_list), *next(target_in_list, 1), newCorner.direction);
 
                         lastPlaced = prev(target_in_list);
 
 
-                        prev(lastPlaced)->direction = lastPlaced->direction;
                         lastPlaced->direction = newCorner.direction;
+                        next(lastPlaced)->direction = newCorner.direction;
 
 
-                        if(onTop){
+                        if (onTop) {
                             prev(target_in_list)->top = target_in_list->top;
                             next(target_in_list)->top = newCorner.top;
-                        }else
+                        } else
                             target_in_list->bot = next(target_in_list)->bot;
-
 
 
                         eventList.erase(target_in_list);
 
                         for (auto &a: eventList) {
-                            cout << a.target << " : " << a.top << " : " << a.bot << " : "<< a.direction << endl;
+                            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
                         }
 
                         cout << "Last placed: " << lastPlaced->target << endl;
                     }
                 }
             }
-
         }
         cout << "END" << endl;
         final_res += calc(*(lastPlaced), *next(lastPlaced), f.direction());
 
         cout << "Final: " << final_res << endl;
-//        auto firstEvent = crossingDiagonals.front();
-//
-//
-//        eventList.push_front(Corner{firstEvent.target(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
-//                                    firstEvent.direction()});
-//        eventList.push_back(Corner{firstEvent.source(), diagMap[firstEvent.opposite()], diagMap[firstEvent],
-//                                   firstEvent.direction()});
-//
-//        Kernel::FT res = 0;
-//        Corner newEvent;
-//        auto oldDirection = firstEvent.opposite().direction();
-//
-//
-//        auto lastPlaced = (eventList.begin());
-//
-//        for (auto it = crossingDiagonals.begin() + 2; it != crossingDiagonals.end(); it += 2) {
-//
-//            bool onTop = true;
-//            auto s = *it;
-//            if (it->direction() > next(it)->direction()) {
-//                onTop = false;
-//                s = *next(it);
-//            }
-//
-//            cout << *it << endl;
-//            auto opp = find(eventList.begin(), eventList.end(), Corner{it->source()});
-//
-//
-//            newEvent = {it->target(), diagMap[s], diagMap[s.opposite()], s.direction()};
-//
-//
-//            auto in_list = find(eventList.begin(), eventList.end(), newEvent);
-//
-//            if (in_list == eventList.end() && opp != eventList.end())
-//                newEvent.target = it->target();
-//
-//
-//            if (in_list == eventList.end()) {
-//                cout << "APPEARANCE: " << newEvent.target << endl;
-//
-//                res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-//
-//
-//                lastPlaced = (eventList.insert(next(lastPlaced), newEvent));
-//
-//
-//                if (opp != eventList.end()) {
-//                    opp->top = newEvent.top;
-//                    opp->bot = newEvent.bot;
-//                }
-//                if (onTop)
-//                    prev(lastPlaced)->top = lastPlaced->top;
-//                else
-//                    (lastPlaced)->bot = prev(lastPlaced)->bot;
-//
-//            } else if (opp == eventList.end()) {
-//                newEvent.target = it->source();
-//                cout << "APPEARANCE: " << newEvent.target << endl;
-//
-//                res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-//
-//
-//                lastPlaced = (eventList.insert(next(lastPlaced), newEvent));
-//
-//
-//                if (opp != eventList.end()) {
-//                    opp->top = newEvent.top;
-//                    opp->bot = newEvent.bot;
-//                }
-//                if (onTop)
-//                    prev(lastPlaced)->top = lastPlaced->top;
-//            } else {
-//                if (newEvent.target == eventList.front().target || newEvent.target == eventList.back().target) {
-//                    newEvent.target = it->source();
-//
-//                    cout << "DISAPPEARANCE" << endl;
-//                    res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-//
-//                    auto finished = find(eventList.begin(), eventList.end(), newEvent);
-//
-//
-//                    if (opp != eventList.end()) {
-//                        if (!onTop) {
-//                            next(finished)->top = finished->top;
-//                            next(finished)->bot = finished->bot;
-//                        } else {
-//                            prev(finished)->top = finished->top;
-//                            prev(finished)->bot = finished->bot;
-//                        }
-//                    }
-//
-//                    eventList.erase(finished);
-//
-//
-//                } else {
-//                    cout << "SWAP" << endl;
-//                    res += calculate_trapezoids(eventList, oldDirection, newEvent.direction);
-//
-//                    next(in_list)->top = in_list->top;
-//                    in_list->bot = next(in_list, 2)->bot;
-//                    iter_swap(in_list, next(in_list));
-//                }
-//            }
-//            oldDirection = newEvent.direction;
-//        }
-//
-//        cout << "END" << endl;
-//        iter_swap(eventList.begin(), next(eventList.begin()));
-//        //res += calculate_trapezoids(eventList, oldDirection, eventList.back().direction);
-//
-//        cout << "FINAL RES: " << res <<
-//             endl;
-
     }
-
 };
 
 
@@ -868,7 +677,7 @@ int main() {
     polygon.push_back(Point_2{1, -2.0});
     polygon.push_back(Point_2{2, 0});
     polygon.push_back(Point_2{2, 2});
-
+//
 //    polygon.push_back(Point_2{0.0, 0.0});
 //    polygon.push_back(Point_2{-2.0, -1.0});
 //    polygon.push_back(Point_2{1.0, -1.0});

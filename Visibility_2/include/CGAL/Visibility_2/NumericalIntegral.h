@@ -100,6 +100,130 @@ public:
         return t179;
     };
 
+    static T ComputeZero(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
+                         T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y, T rho) {
+
+        T t1 = V0Y * V0X;
+        T t2 = T0Y - T1Y;
+        T t7 = V0X * t2 + (-T0X + T1X) * V0Y;
+        T t8 = 0.1e1 / t7;
+        T t11 = V0Y * V0Y;
+        T t12 = V1X * t11;
+        T t15 = -t8 * t2 * V1Y * t1 + t8 * t2 * t12;
+        T t16 = (int) (B0Y - B1Y);
+        T t17 = (double) t16 * (double) t16;
+        T t22 = V0X * (double) t16 + (-B0X + B1X) * V0Y;
+        T t23 = t22 * t22;
+        T t24 = 0.1e1 / t23;
+        T t27 = -V1Y * t1 + t12;
+        T t28 = t2 * t2;
+        T t29 = t28 * t27;
+        T t30 = t7 * t7;
+        T t31 = 0.1e1 / t30;
+        T t32 = (double) t16 * t31;
+        T t33 = 0.1e1 / t22;
+        T t41 = PRX * (V0Y + PRY) - PRY * (V0X + PRX);
+        T t42 = t41 * t41;
+        T t43 = t42 * t42;
+        T t44 = t11 * t11;
+        T t45 = 0.1e1 / t44;
+        T t47 = PLY * PLY;
+        T t48 = t47 * t47;
+        T t49 = V0X * V0X;
+        T t50 = t49 * t49;
+        T t58 = T0X * T1Y - T0Y * T1X;
+        T t64 = -t8 * t58 * V1Y * t1 + t8 * t58 * t12;
+        T t69 = B0X * B1Y - B0Y * B1X;
+        T t71 = (double) t16 * t11;
+        T t76 = 0.1e1 / t11;
+        T t78 = (int) (t58 * t27);
+        T t79 = (int) (t31 * t2);
+        T t90 = 0.1e1 / t11 / V0Y;
+        T t102 = t69 * t69;
+        T t108 = t58 * t58;
+        T t109 = t108 * t27;
+        T t124 = 0.1e1 / V0Y;
+        T t128 = t124 * V0X * PLY + t124 * t41;
+        return (-t45 * t50 * t48 + t45 * t43) * (-t17 * t15 * t24 + t33 * t32 * t29) / 0.8e1 +
+               (t90 * t49 * V0X * t47 * PLY + t90 * t42 * t41) *
+               (-t76 * t24 * (t11 * t17 * t64 + 0.2e1 * t71 * t69 * t15) -
+                t33 * (-(double) (2 * t16 * t79 * t78) - t69 * t31 * t29)) / 0.6e1 + (-t76 * t49 * t47 + t76 * t42) *
+                                                                                     (-t76 * t24 * (t11 * t102 * t15 +
+                                                                                                    0.2e1 * t71 * t69 *
+                                                                                                    t64) - t33 *
+                                                                                                           (-0.2e1 *
+                                                                                                            t69 *
+                                                                                                            (double) t79 *
+                                                                                                            (double) t78 -
+                                                                                                            t32 *
+                                                                                                            t109)) /
+                                                                                     0.4e1 -
+               t128 * t24 * t102 * t64 / 0.2e1 + t128 * t33 * t69 * t31 * t109 / 0.2e1;
+
+    };
+
+    static T ComputeOne(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
+                        T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y, T rho) {
+
+        T t1 = V1Y * V1Y;
+        T t2 = t1 * V0X;
+        T t3 = T0Y - T1Y;
+        T t7 = V1X * t3 + (-T0X + T1X) * V1Y;
+        T t8 = 0.1e1 / t7;
+        T t11 = V0Y * V1X;
+        T t15 = t8 * t3 * V1Y * t11 - t8 * t3 * t2;
+        T t16 = (int) (B0Y - B1Y);
+        T t17 = (double) t16 * (double) t16;
+        T t22 = V1X * (double) t16 + (-B0X + B1X) * V1Y;
+        T t23 = t22 * t22;
+        T t24 = 0.1e1 / t23;
+        T t27 = V1Y * t11 - t2;
+        T t28 = t3 * t3;
+        T t29 = t28 * t27;
+        T t30 = t7 * t7;
+        T t31 = 0.1e1 / t30;
+        T t32 = (double) t16 * t31;
+        T t33 = 0.1e1 / t22;
+        T t41 = PRX * (V1Y + PRY) - PRY * (V1X + PRX);
+        T t42 = t41 * t41;
+        T t43 = t42 * t42;
+        T t44 = t1 * t1;
+        T t45 = 0.1e1 / t44;
+        T t47 = PLY * PLY;
+        T t48 = t47 * t47;
+        T t49 = V1X * V1X;
+        T t50 = t49 * t49;
+        T t58 = T0X * T1Y - T0Y * T1X;
+        T t64 = t8 * t58 * V1Y * t11 - t8 * t58 * t2;
+        T t69 = B0X * B1Y - B0Y * B1X;
+        T t71 = (double) t16 * t1;
+        T t76 = 0.1e1 / t1;
+        T t78 = (int) (t58 * t27);
+        T t79 = (int) (t31 * t3);
+        T t90 = 0.1e1 / t1 / V1Y;
+        T t102 = t69 * t69;
+        T t108 = t58 * t58;
+        T t109 = t108 * t27;
+        T t124 = 0.1e1 / V1Y;
+        T t128 = t124 * V1X * PLY + t124 * t41;
+        return (-t45 * t50 * t48 + t45 * t43) * (-t17 * t15 * t24 + t33 * t32 * t29) / 0.8e1 +
+               (t90 * t49 * V1X * t47 * PLY + t90 * t42 * t41) *
+               (-t76 * t24 * (t1 * t17 * t64 + 0.2e1 * t71 * t69 * t15) -
+                t33 * (-(double) (2 * t16 * t79 * t78) - t69 * t31 * t29)) / 0.6e1 + (-t76 * t49 * t47 + t76 * t42) *
+                                                                                     (-t76 * t24 * (t1 * t102 * t15 +
+                                                                                                    0.2e1 * t71 * t69 *
+                                                                                                    t64) - t33 *
+                                                                                                           (-0.2e1 *
+                                                                                                            t69 *
+                                                                                                            (double) t79 *
+                                                                                                            (double) t78 -
+                                                                                                            t32 *
+                                                                                                            t109)) /
+                                                                                     0.4e1 -
+               t128 * t24 * t102 * t64 / 0.2e1 + t128 * t33 * t69 * t31 * t109 / 0.2e1;
+
+    };
+
     static T ComputeUnOpt(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
                           T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y, T rho) {
 
@@ -117,8 +241,8 @@ public:
                                                             (-T0X + T1X) * (-V0Y * (1 - rho) - V1Y * rho))) *
                 pow(B0Y - B1Y, 0.2e1) * pow((B0Y - B1Y) * (double) (V0X * (1 - rho) + V1X * rho) -
                                             (double) ((-B0X + B1X) * (-V0Y * (1 - rho) - V1Y * rho)), -0.2e1) / 0.2e1 +
-                (double) (-V0X * V0Y * V1Y * rho + V0X * V1Y * V1Y * rho + V0Y * V0Y * V1X * rho -
-                          V0Y * V1X * V1Y * rho + V0X * V0Y * V1Y - V0Y * V0Y * V1X) *
+                (double) (V0X * V0Y * V1Y * rho - V0X * V1Y * V1Y * rho - V0Y * V0Y * V1X * rho +
+                          V0Y * V1X * V1Y * rho - V0X * V0Y * V1Y + V0Y * V0Y * V1X) *
                 (double) (int) pow((double) (T0Y - T1Y), (double) 2) * (double) (int) pow(
                         (double) ((T0Y - T1Y) * (V0X * (1 - rho) + V1X * rho) -
                                   (-T0X + T1X) * (-V0Y * (1 - rho) - V1Y * rho)), (double) (-2)) * (B0Y - B1Y) /
@@ -190,25 +314,25 @@ public:
                             (double) ((-B0X + B1X) * (-V0Y * (1 - rho) - V1Y * rho)), -0.2e1) *
                         (double) (int) pow((double) (V0Y * (1 - rho) + V1Y * rho), (double) (-2)) / 0.2e1 - (0.2e1 *
                                                                                                              (double) (
-                                                                                                                     -V0X *
+                                                                                                                     V0X *
                                                                                                                      V0Y *
                                                                                                                      V1Y *
-                                                                                                                     rho +
+                                                                                                                     rho -
                                                                                                                      V0X *
                                                                                                                      V1Y *
                                                                                                                      V1Y *
-                                                                                                                     rho +
-                                                                                                                     V0Y *
-                                                                                                                     V0Y *
-                                                                                                                     V1X *
                                                                                                                      rho -
                                                                                                                      V0Y *
+                                                                                                                     V0Y *
+                                                                                                                     V1X *
+                                                                                                                     rho +
+                                                                                                                     V0Y *
                                                                                                                      V1X *
                                                                                                                      V1Y *
-                                                                                                                     rho +
+                                                                                                                     rho -
                                                                                                                      V0X *
                                                                                                                      V0Y *
-                                                                                                                     V1Y -
+                                                                                                                     V1Y +
                                                                                                                      V0Y *
                                                                                                                      V0Y *
                                                                                                                      V1X) *
@@ -252,25 +376,25 @@ public:
                                                                                                              (B0Y -
                                                                                                               B1Y) +
                                                                                                              (double) (
-                                                                                                                     -V0X *
+                                                                                                                     V0X *
                                                                                                                      V0Y *
                                                                                                                      V1Y *
-                                                                                                                     rho +
+                                                                                                                     rho -
                                                                                                                      V0X *
                                                                                                                      V1Y *
                                                                                                                      V1Y *
-                                                                                                                     rho +
-                                                                                                                     V0Y *
-                                                                                                                     V0Y *
-                                                                                                                     V1X *
                                                                                                                      rho -
                                                                                                                      V0Y *
+                                                                                                                     V0Y *
+                                                                                                                     V1X *
+                                                                                                                     rho +
+                                                                                                                     V0Y *
                                                                                                                      V1X *
                                                                                                                      V1Y *
-                                                                                                                     rho +
+                                                                                                                     rho -
                                                                                                                      V0X *
                                                                                                                      V0Y *
-                                                                                                                     V1Y -
+                                                                                                                     V1Y +
                                                                                                                      V0Y *
                                                                                                                      V0Y *
                                                                                                                      V1X) *
@@ -702,25 +826,25 @@ public:
                                                                                                                       (double) (-2)) /
                                                                                                               0.2e1 -
                                                                                                               (-(double) (
-                                                                                                                      -V0X *
+                                                                                                                      V0X *
                                                                                                                       V0Y *
                                                                                                                       V1Y *
-                                                                                                                      rho +
+                                                                                                                      rho -
                                                                                                                       V0X *
                                                                                                                       V1Y *
                                                                                                                       V1Y *
-                                                                                                                      rho +
-                                                                                                                      V0Y *
-                                                                                                                      V0Y *
-                                                                                                                      V1X *
                                                                                                                       rho -
                                                                                                                       V0Y *
+                                                                                                                      V0Y *
+                                                                                                                      V1X *
+                                                                                                                      rho +
+                                                                                                                      V0Y *
                                                                                                                       V1X *
                                                                                                                       V1Y *
-                                                                                                                      rho +
+                                                                                                                      rho -
                                                                                                                       V0X *
                                                                                                                       V0Y *
-                                                                                                                      V1Y -
+                                                                                                                      V1Y +
                                                                                                                       V0Y *
                                                                                                                       V0Y *
                                                                                                                       V1X) *
@@ -768,25 +892,25 @@ public:
                                                                                                                 B1Y) -
                                                                                                                0.2e1 *
                                                                                                                (double) (
-                                                                                                                       -V0X *
+                                                                                                                       V0X *
                                                                                                                        V0Y *
                                                                                                                        V1Y *
-                                                                                                                       rho +
+                                                                                                                       rho -
                                                                                                                        V0X *
                                                                                                                        V1Y *
                                                                                                                        V1Y *
-                                                                                                                       rho +
-                                                                                                                       V0Y *
-                                                                                                                       V0Y *
-                                                                                                                       V1X *
                                                                                                                        rho -
                                                                                                                        V0Y *
+                                                                                                                       V0Y *
+                                                                                                                       V1X *
+                                                                                                                       rho +
+                                                                                                                       V0Y *
                                                                                                                        V1X *
                                                                                                                        V1Y *
-                                                                                                                       rho +
+                                                                                                                       rho -
                                                                                                                        V0X *
                                                                                                                        V0Y *
-                                                                                                                       V1Y -
+                                                                                                                       V1Y +
                                                                                                                        V0Y *
                                                                                                                        V0Y *
                                                                                                                        V1X) *
@@ -922,8 +1046,8 @@ public:
                ((double) ((PRX * (V0Y * (1 - rho) + V1Y * rho + PRY) - PRY * (V0X * (1 - rho) + V1X * rho + PRX)) /
                           (V0Y * (1 - rho) + V1Y * rho)) +
                 PLY * (double) (V0X * (1 - rho) + V1X * rho) / (double) (V0Y * (1 - rho) + V1Y * rho)) / 0.2e1 -
-               (double) (-V0X * V0Y * V1Y * rho + V0X * V1Y * V1Y * rho + V0Y * V0Y * V1X * rho -
-                         V0Y * V1X * V1Y * rho + V0X * V0Y * V1Y - V0Y * V0Y * V1X) *
+               (double) (V0X * V0Y * V1Y * rho - V0X * V1Y * V1Y * rho - V0Y * V0Y * V1X * rho + V0Y * V1X * V1Y * rho -
+                         V0X * V0Y * V1Y + V0Y * V0Y * V1X) *
                (double) (int) pow((double) (T0X * T1Y - T0Y * T1X), (double) 2) *
                (double) (int) pow((double) (-V0Y * (1 - rho) - V1Y * rho), (double) 3) * (double) (int) pow(
                        (double) ((T0Y - T1Y) * (V0X * (1 - rho) + V1X * rho) -
@@ -935,379 +1059,6 @@ public:
                           (V0Y * (1 - rho) + V1Y * rho)) +
                 PLY * (double) (V0X * (1 - rho) + V1X * rho) / (double) (V0Y * (1 - rho) + V1Y * rho)) / 0.2e1;
 
-    }
-
-
-    static T ComputeOrig(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
-                         T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y, T phi) {
-
-
-        T cg = -sin(phi) / (0.2e1 * ((T0X - T0Y - T1X + T1Y) * B0X + (-T0X + T0Y + T1X - T1Y) * B1X -
-                                     (T0X + T0Y - T1X - T1Y) * (B0Y - B1Y)) *
-                            ((T0X + T0Y - T1X - T1Y) * B0X + (-T0X - T0Y + T1X + T1Y) * B1X +
-                             (T0X - T0Y - T1X + T1Y) * (B0Y - B1Y)) * pow(cos(phi), 0.4e1) +
-                            0.4e1 * ((T0X - T1X) * B0X + (-T0X + T1X) * B1X - (T0Y - T1Y) * (B0Y - B1Y)) * sin(phi) *
-                            ((T0Y - T1Y) * B0X + (-T0Y + T1Y) * B1X + (T0X - T1X) * (B0Y - B1Y)) *
-                            pow(cos(phi), 0.3e1) +
-                            ((-0.4e1 * T0X * T0X + 0.8e1 * T0X * T1X - 0.4e1 * T1X * T1X +
-                              0.2e1 * pow(T0Y - T1Y, 0.2e1)) * B0X * B0X +
-                             ((0.8e1 * T0X * T0X - 0.16e2 * T0X * T1X + 0.8e1 * T1X * T1X -
-                               0.4e1 * pow(T0Y - T1Y, 0.2e1)) * B1X + 0.8e1 * (T0Y - T1Y) * (T0X - T1X) * (B0Y - B1Y)) *
-                             B0X + (-0.4e1 * T0X * T0X + 0.8e1 * T0X * T1X - 0.4e1 * T1X * T1X +
-                                    0.2e1 * pow(T0Y - T1Y, 0.2e1)) * B1X * B1X -
-                             0.8e1 * (T0Y - T1Y) * (T0X - T1X) * (B0Y - B1Y) * B1X +
-                             0.2e1 * pow(T0X - T1X, 0.2e1) * pow(B0Y - B1Y, 0.2e1)) * pow(cos(phi), 0.2e1) -
-                            0.4e1 * (T0X - T1X) * (B0X - B1X) * sin(phi) *
-                            ((T0Y - T1Y) * B0X + (-T0Y + T1Y) * B1X + (T0X - T1X) * (B0Y - B1Y)) * cos(phi) +
-                            0.2e1 * pow(T0X - T1X, 0.2e1) * pow(B0X - B1X, 0.2e1)) *
-               (((T0X + T0Y - T1X - T1Y) * (T0X - T0Y - T1X + T1Y) * pow(cos(phi), 0.2e1) +
-                 0.2e1 * sin(phi) * (T0Y - T1Y) * (T0X - T1X) * cos(phi) - pow(T0X - T1X, 0.2e1)) *
-                sqrt(-pow(T0X * T1Y - T0Y * T1X + (PRX - PRY / tan(phi)) * T0Y - (PRX - PRY / tan(phi)) * T1Y, 0.2e1) /
-                     (0.2e1 * sin(phi) * cos(phi) * T0X * T0Y - 0.2e1 * sin(phi) * cos(phi) * T0X * T1Y -
-                      0.2e1 * sin(phi) * cos(phi) * T0Y * T1X + 0.2e1 * sin(phi) * cos(phi) * T1X * T1Y +
-                      T0X * T0X * pow(cos(phi), 0.2e1) - 0.2e1 * T0X * T1X * pow(cos(phi), 0.2e1) -
-                      pow(cos(phi), 0.2e1) * T0Y * T0Y + 0.2e1 * pow(cos(phi), 0.2e1) * T0Y * T1Y +
-                      T1X * T1X * pow(cos(phi), 0.2e1) - pow(cos(phi), 0.2e1) * T1Y * T1Y - T0X * T0X +
-                      0.2e1 * T0X * T1X - T1X * T1X)) * (PRX - PRY / tan(phi)) *
-                (-0.24e2 * B0X * B0Y * B1X * B1Y * T0X * T1Y + 0.24e2 * B0X * B0Y * B1X * B1Y * T0Y * T1X -
-                 0.3e1 * B0Y * B0Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) -
-                 0.3e1 * B1Y * B1Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.3e1 * B1Y * B1Y * T0Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.3e1 * B0Y * B0Y * T0Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.6e1 * B0X * B0X * B1Y * B1Y * T0Y * (PRX - PRY / tan(phi)) -
-                 0.6e1 * B0X * B0X * B1Y * B1Y * T1Y * (PRX - PRY / tan(phi)) -
-                 0.8e1 * B0X * B1Y * B1Y * T0Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.8e1 * B0X * B1Y * B1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.6e1 * B0Y * B0Y * B1X * B1X * T0Y * (PRX - PRY / tan(phi)) -
-                 0.6e1 * B0Y * B0Y * B1X * B1X * T1Y * (PRX - PRY / tan(phi)) -
-                 0.8e1 * B0Y * B0Y * B1X * T0Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * B0Y * B1X * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.4e1 * B0Y * B0Y * T0X * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.4e1 * B0Y * B0Y * T0Y * T1X * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.6e1 * B0Y * B1Y * T0Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.6e1 * B0Y * B1Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.4e1 * B1Y * B1Y * T0X * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.4e1 * B1Y * B1Y * T0Y * T1X * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.12e2 * B0X * B0Y * B1X * B1Y * T0Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0X * B0Y * B1X * B1Y * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0X * B0Y * B1Y * T0X * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0X * B0Y * B1Y * T0Y * T1X * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0Y * B1X * B1Y * T0X * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0Y * B1X * B1Y * T0Y * T1X * (PRX - PRY / tan(phi)) +
-                 0.8e1 * B0X * B0Y * B1Y * T0Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.8e1 * B0X * B0Y * B1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.12e2 * B0X * B1Y * B1Y * T0X * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0X * B1Y * B1Y * T0Y * T1X * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0Y * B0Y * B1X * T0X * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0Y * B0Y * B1X * T0Y * T1X * (PRX - PRY / tan(phi)) +
-                 0.8e1 * B0Y * B1X * B1Y * T0Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.8e1 * B0Y * B1X * B1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.8e1 * B0Y * B1Y * T0X * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * B1Y * T0Y * T1X * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.12e2 * B0X * B0X * B1Y * B1Y * T0X * T1Y - 0.12e2 * B0X * B0X * B1Y * B1Y * T0Y * T1X +
-                 0.12e2 * B0Y * B0Y * B1X * B1X * T0X * T1Y - 0.12e2 * B0Y * B0Y * B1X * B1X * T0Y * T1X) /
-                (T0X * T1Y - T0Y * T1X + (PRX - PRY / tan(phi)) * T0Y - (PRX - PRY / tan(phi)) * T1Y) / 0.12e2 +
-                ((B0X + B0Y - B1X - B1Y) * (B0X - B0Y - B1X + B1Y) * pow(cos(phi), 0.2e1) +
-                 0.2e1 * sin(phi) * (B0Y - B1Y) * (B0X - B1X) * cos(phi) - pow(B0X - B1X, 0.2e1)) *
-                sqrt(-pow(B0X * B1Y - B0Y * B1X + (PRX - PRY / tan(phi)) * B0Y - (PRX - PRY / tan(phi)) * B1Y, 0.2e1) /
-                     (B0X * B0X * pow(cos(phi), 0.2e1) + 0.2e1 * B0X * B0Y * sin(phi) * cos(phi) -
-                      0.2e1 * B0X * B1X * pow(cos(phi), 0.2e1) - 0.2e1 * B0X * B1Y * sin(phi) * cos(phi) -
-                      B0Y * B0Y * pow(cos(phi), 0.2e1) - 0.2e1 * B0Y * B1X * sin(phi) * cos(phi) +
-                      0.2e1 * B0Y * B1Y * pow(cos(phi), 0.2e1) + B1X * B1X * pow(cos(phi), 0.2e1) +
-                      0.2e1 * B1X * B1Y * sin(phi) * cos(phi) - B1Y * B1Y * pow(cos(phi), 0.2e1) - B0X * B0X +
-                      0.2e1 * B0X * B1X - B1X * B1X)) * (PRX - PRY / tan(phi)) *
-                (-0.24e2 * B0X * B1Y * T0X * T0Y * T1X * T1Y + 0.24e2 * B0Y * B1X * T0X * T0Y * T1X * T1Y +
-                 0.3e1 * B0Y * T1Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) -
-                 0.3e1 * B1Y * T0Y * T0Y * pow(PRX - PRY / tan(phi), 0.3e1) -
-                 0.3e1 * B1Y * T1Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) -
-                 0.8e1 * B0Y * T0X * T1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.6e1 * B0Y * T0Y * T0Y * T1X * T1X * (PRX - PRY / tan(phi)) -
-                 0.8e1 * B0Y * T0Y * T0Y * T1X * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.6e1 * B0Y * T0Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) -
-                 0.6e1 * B1Y * T0X * T0X * T1Y * T1Y * (PRX - PRY / tan(phi)) +
-                 0.8e1 * B1Y * T0X * T1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.6e1 * B1Y * T0Y * T0Y * T1X * T1X * (PRX - PRY / tan(phi)) +
-                 0.8e1 * B1Y * T0Y * T0Y * T1X * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.6e1 * B1Y * T0Y * T1Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.3e1 * B0Y * T0Y * T0Y * pow(PRX - PRY / tan(phi), 0.3e1) +
-                 0.12e2 * B0X * B1Y * T0X * T0X * T1Y * T1Y +
-                 0.12e2 * B0X * B1Y * T0Y * T0Y * T1X * T1X - 0.12e2 * B0Y * B1X * T0X * T0X * T1Y * T1Y -
-                 0.12e2 * B0Y * B1X * T0Y * T0Y * T1X * T1X +
-                 0.4e1 * B0X * B1Y * T0Y * T0Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.4e1 * B0X * B1Y * T1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.4e1 * B0Y * B1X * T0Y * T0Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.4e1 * B0Y * B1X * T1Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.6e1 * B0Y * T0X * T0X * T1Y * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0X * B1Y * T0X * T0Y * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0X * B1Y * T0Y * T1X * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0Y * B1X * T0X * T0Y * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0Y * B1X * T0Y * T1X * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0Y * T0X * T0Y * T1X * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B1Y * T0X * T0Y * T1X * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0X * B1Y * T0X * T1Y * T1Y * (PRX - PRY / tan(phi)) -
-                 0.12e2 * B0X * B1Y * T0Y * T0Y * T1X * (PRX - PRY / tan(phi)) -
-                 0.8e1 * B0X * B1Y * T0Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.12e2 * B0Y * B1X * T0X * T1Y * T1Y * (PRX - PRY / tan(phi)) +
-                 0.12e2 * B0Y * B1X * T0Y * T0Y * T1X * (PRX - PRY / tan(phi)) +
-                 0.8e1 * B0Y * B1X * T0Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * T0X * T0Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * T0Y * T1X * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.8e1 * B1Y * T0X * T0Y * T1Y * pow(PRX - PRY / tan(phi), 0.2e1) -
-                 0.8e1 * B1Y * T0Y * T1X * T1Y * pow(PRX - PRY / tan(phi), 0.2e1)) /
-                (B0X * B1Y - B0Y * B1X + (PRX - PRY / tan(phi)) * B0Y - (PRX - PRY / tan(phi)) * B1Y) / 0.12e2) +
-               sin(phi) / (0.2e1 * ((T0X - T0Y - T1X + T1Y) * B0X + (-T0X + T0Y + T1X - T1Y) * B1X -
-                                    (T0X + T0Y - T1X - T1Y) * (B0Y - B1Y)) *
-                           ((T0X + T0Y - T1X - T1Y) * B0X + (-T0X - T0Y + T1X + T1Y) * B1X +
-                            (T0X - T0Y - T1X + T1Y) * (B0Y - B1Y)) * pow(cos(phi), 0.4e1) +
-                           0.4e1 * ((T0X - T1X) * B0X + (-T0X + T1X) * B1X - (T0Y - T1Y) * (B0Y - B1Y)) * sin(phi) *
-                           ((T0Y - T1Y) * B0X + (-T0Y + T1Y) * B1X + (T0X - T1X) * (B0Y - B1Y)) * pow(cos(phi), 0.3e1) +
-                           ((-0.4e1 * T0X * T0X + 0.8e1 * T0X * T1X - 0.4e1 * T1X * T1X +
-                             0.2e1 * pow(T0Y - T1Y, 0.2e1)) *
-                            B0X * B0X + ((0.8e1 * T0X * T0X - 0.16e2 * T0X * T1X + 0.8e1 * T1X * T1X -
-                                          0.4e1 * pow(T0Y - T1Y, 0.2e1)) * B1X +
-                                         0.8e1 * (T0Y - T1Y) * (T0X - T1X) * (B0Y - B1Y)) * B0X +
-                            (-0.4e1 * T0X * T0X + 0.8e1 * T0X * T1X - 0.4e1 * T1X * T1X +
-                             0.2e1 * pow(T0Y - T1Y, 0.2e1)) *
-                            B1X * B1X - 0.8e1 * (T0Y - T1Y) * (T0X - T1X) * (B0Y - B1Y) * B1X +
-                            0.2e1 * pow(T0X - T1X, 0.2e1) * pow(B0Y - B1Y, 0.2e1)) * pow(cos(phi), 0.2e1) -
-                           0.4e1 * (T0X - T1X) * (B0X - B1X) * sin(phi) *
-                           ((T0Y - T1Y) * B0X + (-T0Y + T1Y) * B1X + (T0X - T1X) * (B0Y - B1Y)) * cos(phi) +
-                           0.2e1 * pow(T0X - T1X, 0.2e1) * pow(B0X - B1X, 0.2e1)) *
-               (((T0X + T0Y - T1X - T1Y) * (T0X - T0Y - T1X + T1Y) * pow(cos(phi), 0.2e1) +
-                 0.2e1 * sin(phi) * (T0Y - T1Y) * (T0X - T1X) * cos(phi) - pow(T0X - T1X, 0.2e1)) *
-                sqrt(-pow(T0X * T1Y - T0Y * T1X + (PLX - PLY / tan(phi)) * T0Y - (PLX - PLY / tan(phi)) * T1Y, 0.2e1) /
-                     (0.2e1 * sin(phi) * cos(phi) * T0X * T0Y - 0.2e1 * sin(phi) * cos(phi) * T0X * T1Y -
-                      0.2e1 * sin(phi) * cos(phi) * T0Y * T1X + 0.2e1 * sin(phi) * cos(phi) * T1X * T1Y +
-                      T0X * T0X * pow(cos(phi), 0.2e1) - 0.2e1 * T0X * T1X * pow(cos(phi), 0.2e1) -
-                      pow(cos(phi), 0.2e1) * T0Y * T0Y + 0.2e1 * pow(cos(phi), 0.2e1) * T0Y * T1Y +
-                      T1X * T1X * pow(cos(phi), 0.2e1) - pow(cos(phi), 0.2e1) * T1Y * T1Y - T0X * T0X +
-                      0.2e1 * T0X * T1X - T1X * T1X)) * (PLX - PLY / tan(phi)) *
-                (-0.24e2 * B0X * B0Y * B1X * B1Y * T0X * T1Y + 0.24e2 * B0X * B0Y * B1X * B1Y * T0Y * T1X -
-                 0.3e1 * B0Y * B0Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.3e1 * B1Y * B1Y * T0Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.3e1 * B0Y * B0Y * T0Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.6e1 * B0X * B0X * B1Y * B1Y * T0Y * (PLX - PLY / tan(phi)) -
-                 0.6e1 * B0X * B0X * B1Y * B1Y * T1Y * (PLX - PLY / tan(phi)) -
-                 0.8e1 * B0X * B1Y * B1Y * T0Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.8e1 * B0X * B1Y * B1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.6e1 * B0Y * B0Y * B1X * B1X * T0Y * (PLX - PLY / tan(phi)) -
-                 0.6e1 * B0Y * B0Y * B1X * B1X * T1Y * (PLX - PLY / tan(phi)) -
-                 0.8e1 * B0Y * B0Y * B1X * T0Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * B0Y * B1X * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.4e1 * B0Y * B0Y * T0X * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.4e1 * B0Y * B0Y * T0Y * T1X * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.6e1 * B0Y * B1Y * T0Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.6e1 * B0Y * B1Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.4e1 * B1Y * B1Y * T0X * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.4e1 * B1Y * B1Y * T0Y * T1X * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.3e1 * B1Y * B1Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) -
-                 0.12e2 * B0X * B0Y * B1X * B1Y * T0Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0X * B0Y * B1X * B1Y * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0X * B0Y * B1Y * T0X * T1Y * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0X * B0Y * B1Y * T0Y * T1X * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0Y * B1X * B1Y * T0X * T1Y * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0Y * B1X * B1Y * T0Y * T1X * (PLX - PLY / tan(phi)) +
-                 0.8e1 * B0X * B0Y * B1Y * T0Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.8e1 * B0X * B0Y * B1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.12e2 * B0X * B1Y * B1Y * T0X * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0X * B1Y * B1Y * T0Y * T1X * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0Y * B0Y * B1X * T0X * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0Y * B0Y * B1X * T0Y * T1X * (PLX - PLY / tan(phi)) +
-                 0.8e1 * B0Y * B1X * B1Y * T0Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.8e1 * B0Y * B1X * B1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.8e1 * B0Y * B1Y * T0X * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * B1Y * T0Y * T1X * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.12e2 * B0X * B0X * B1Y * B1Y * T0X * T1Y - 0.12e2 * B0X * B0X * B1Y * B1Y * T0Y * T1X +
-                 0.12e2 * B0Y * B0Y * B1X * B1X * T0X * T1Y - 0.12e2 * B0Y * B0Y * B1X * B1X * T0Y * T1X) /
-                (T0X * T1Y - T0Y * T1X + (PLX - PLY / tan(phi)) * T0Y - (PLX - PLY / tan(phi)) * T1Y) / 0.12e2 +
-                ((B0X + B0Y - B1X - B1Y) * (B0X - B0Y - B1X + B1Y) * pow(cos(phi), 0.2e1) +
-                 0.2e1 * sin(phi) * (B0Y - B1Y) * (B0X - B1X) * cos(phi) - pow(B0X - B1X, 0.2e1)) *
-                sqrt(-pow(B0X * B1Y - B0Y * B1X + (PLX - PLY / tan(phi)) * B0Y - (PLX - PLY / tan(phi)) * B1Y, 0.2e1) /
-                     (B0X * B0X * pow(cos(phi), 0.2e1) + 0.2e1 * B0X * B0Y * sin(phi) * cos(phi) -
-                      0.2e1 * B0X * B1X * pow(cos(phi), 0.2e1) - 0.2e1 * B0X * B1Y * sin(phi) * cos(phi) -
-                      B0Y * B0Y * pow(cos(phi), 0.2e1) - 0.2e1 * B0Y * B1X * sin(phi) * cos(phi) +
-                      0.2e1 * B0Y * B1Y * pow(cos(phi), 0.2e1) + B1X * B1X * pow(cos(phi), 0.2e1) +
-                      0.2e1 * B1X * B1Y * sin(phi) * cos(phi) - B1Y * B1Y * pow(cos(phi), 0.2e1) - B0X * B0X +
-                      0.2e1 * B0X * B1X - B1X * B1X)) * (PLX - PLY / tan(phi)) *
-                (-0.24e2 * B0X * B1Y * T0X * T0Y * T1X * T1Y + 0.24e2 * B0Y * B1X * T0X * T0Y * T1X * T1Y +
-                 0.3e1 * B0Y * T0Y * T0Y * pow(PLX - PLY / tan(phi), 0.3e1) -
-                 0.3e1 * B1Y * T0Y * T0Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.3e1 * B0Y * T1Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.4e1 * B0X * B1Y * T0Y * T0Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.4e1 * B0X * B1Y * T1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.4e1 * B0Y * B1X * T0Y * T0Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.4e1 * B0Y * B1X * T1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.6e1 * B0Y * T0X * T0X * T1Y * T1Y * (PLX - PLY / tan(phi)) -
-                 0.8e1 * B0Y * T0X * T1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.6e1 * B0Y * T0Y * T0Y * T1X * T1X * (PLX - PLY / tan(phi)) -
-                 0.8e1 * B0Y * T0Y * T0Y * T1X * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.6e1 * B0Y * T0Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) -
-                 0.6e1 * B1Y * T0X * T0X * T1Y * T1Y * (PLX - PLY / tan(phi)) +
-                 0.8e1 * B1Y * T0X * T1Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.6e1 * B1Y * T0Y * T0Y * T1X * T1X * (PLX - PLY / tan(phi)) +
-                 0.8e1 * B1Y * T0Y * T0Y * T1X * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.6e1 * B1Y * T0Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) -
-                 0.3e1 * B1Y * T1Y * T1Y * pow(PLX - PLY / tan(phi), 0.3e1) +
-                 0.12e2 * B0X * B1Y * T0X * T0X * T1Y * T1Y +
-                 0.12e2 * B0X * B1Y * T0Y * T0Y * T1X * T1X - 0.12e2 * B0Y * B1X * T0X * T0X * T1Y * T1Y -
-                 0.12e2 * B0Y * B1X * T0Y * T0Y * T1X * T1X +
-                 0.12e2 * B0X * B1Y * T0X * T0Y * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0X * B1Y * T0Y * T1X * T1Y * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0Y * B1X * T0X * T0Y * T1Y * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0Y * B1X * T0Y * T1X * T1Y * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0Y * T0X * T0Y * T1X * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B1Y * T0X * T0Y * T1X * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0Y * B1X * T0X * T1Y * T1Y * (PLX - PLY / tan(phi)) +
-                 0.12e2 * B0Y * B1X * T0Y * T0Y * T1X * (PLX - PLY / tan(phi)) +
-                 0.8e1 * B0Y * B1X * T0Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * T0X * T0Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) +
-                 0.8e1 * B0Y * T0Y * T1X * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.8e1 * B1Y * T0X * T0Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.8e1 * B1Y * T0Y * T1X * T1Y * pow(PLX - PLY / tan(phi), 0.2e1) -
-                 0.12e2 * B0X * B1Y * T0X * T1Y * T1Y * (PLX - PLY / tan(phi)) -
-                 0.12e2 * B0X * B1Y * T0Y * T0Y * T1X * (PLX - PLY / tan(phi)) -
-                 0.8e1 * B0X * B1Y * T0Y * T1Y * pow(PLX - PLY / tan(phi), 0.2e1)) /
-                (B0X * B1Y - B0Y * B1X + (PLX - PLY / tan(phi)) * B0Y - (PLX - PLY / tan(phi)) * B1Y) / 0.12e2);
-    }
-
-
-    static T ComputeOne(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
-                        T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y, T rho) {
-        T t1 = V1Y * V1Y;
-        T t2 = t1 * V0X;
-        T t3 = T0Y - T1Y;
-        T t7 = V1X * t3 + (-T0X + T1X) * V1Y;
-        T t8 = 0.1e1 / t7;
-        T t11 = V0Y * V1X;
-        T t15 = t8 * t3 * V1Y * t11 - t8 * t3 * t2;
-        T t16 = (int) (B0Y - B1Y);
-        T t17 = (double) t16 * (double) t16;
-        T t22 = V1X * (double) t16 + (-B0X + B1X) * V1Y;
-        T t23 = t22 * t22;
-        T t24 = 0.1e1 / t23;
-        T t27 = -V1Y * t11 + t2;
-        T t28 = t3 * t3;
-        T t29 = t28 * t27;
-        T t30 = t7 * t7;
-        T t31 = 0.1e1 / t30;
-        T t32 = (double) t16 * t31;
-        T t33 = 0.1e1 / t22;
-        T t41 = PRX * (V1Y + PRY) - PRY * (V1X + PRX);
-        T t42 = t41 * t41;
-        T t43 = t42 * t42;
-        T t44 = t1 * t1;
-        T t45 = 0.1e1 / t44;
-        T t47 = PLY * PLY;
-        T t48 = t47 * t47;
-        T t49 = V1X * V1X;
-        T t50 = t49 * t49;
-        T t58 = T0X * T1Y - T0Y * T1X;
-        T t64 = t8 * t58 * V1Y * t11 - t8 * t58 * t2;
-        T t69 = B0X * B1Y - B0Y * B1X;
-        T t71 = (double) t16 * t1;
-        T t76 = 0.1e1 / t1;
-        T t78 = (int) (t58 * t27);
-        T t79 = (int) (t31 * t3);
-        T t90 = 0.1e1 / V1Y / t1;
-        T t102 = t69 * t69;
-        T t108 = t58 * t58;
-        T t109 = t108 * t27;
-        T t124 = 0.1e1 / V1Y;
-        T t128 = t124 * V1X * PLY + t124 * t41;
-        T t137 = (-t45 * t50 * t48 + t45 * t43) * (-t24 * t17 * t15 + t33 * t32 * t29) / 0.8e1 +
-                 (t90 * V1X * t49 * PLY * t47 + t90 * t41 * t42) *
-                 (-t76 * t24 * (t1 * t17 * t64 + 0.2e1 * t71 * t69 * t15) -
-                  t33 * (-(double) (2 * t16 * t79 * t78) - t69 * t31 * t29)) / 0.6e1 + (-t76 * t49 * t47 + t76 * t42) *
-                                                                                       (-t76 * t24 * (t1 * t102 * t15 +
-                                                                                                      0.2e1 * t71 *
-                                                                                                      t69 * t64) - t33 *
-                                                                                                                   (-0.2e1 *
-                                                                                                                    t69 *
-                                                                                                                    (double) t79 *
-                                                                                                                    (double) t78 -
-                                                                                                                    t32 *
-                                                                                                                    t109)) /
-                                                                                       0.4e1 -
-                 t128 * t24 * t102 * t64 / 0.2e1 + t128 * t33 * t69 * t31 * t109 / 0.2e1;
-        return t137;
-    }
-
-
-    static T ComputeZero(T T0X, T T0Y, T T1X, T T1Y, T B0X, T B0Y, T B1X, T B1Y,
-                         T PLX, T PLY, T PRX, T PRY, T V0X, T V0Y, T V1X, T V1Y, T rho) {
-        return (-(-V0X * V0Y * V1Y * (T0Y - T1Y) / ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y) +
-                  V0Y * V0Y * V1X * (T0Y - T1Y) / ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y)) * pow(B0Y - B1Y, 0.2e1) *
-                pow((B0Y - B1Y) * V0X + (-B0X + B1X) * V0Y, -0.2e1) / 0.2e1 +
-                (V0X * V0Y * V1Y - V0Y * V0Y * V1X) * pow(T0Y - T1Y, 0.2e1) *
-                pow((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y, -0.2e1) * (B0Y - B1Y) /
-                ((B0Y - B1Y) * V0X + (-B0X + B1X) * V0Y) / 0.2e1) *
-               (pow(PRX * (V0Y + PRY) - PRY * (V0X + PRX), 0.4e1) * pow(V0Y, -0.4e1) -
-                pow(PLY, 0.4e1) * pow(V0X, 0.4e1) * pow(V0Y, -0.4e1)) / 0.4e1 +
-               (-((-V0X * V0Y * V1Y * (T0X * T1Y - T0Y * T1X) / ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y) +
-                   V0Y * V0Y * V1X * (T0X * T1Y - T0Y * T1X) / ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y)) *
-                  pow(B0Y - B1Y, 0.2e1) * V0Y * V0Y + 0.2e1 * (-V0X * V0Y * V1Y * (T0Y - T1Y) /
-                                                               ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y) +
-                                                               V0Y * V0Y * V1X * (T0Y - T1Y) /
-                                                               ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y)) *
-                                                      (B0X * B1Y - B0Y * B1X) * V0Y * V0Y * (B0Y - B1Y)) *
-                pow((B0Y - B1Y) * V0X + (-B0X + B1X) * V0Y, -0.2e1) * pow(V0Y, -0.2e1) / 0.2e1 -
-                (-0.2e1 * (V0X * V0Y * V1Y - V0Y * V0Y * V1X) * (T0X * T1Y - T0Y * T1X) * (T0Y - T1Y) *
-                 pow((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y, -0.2e1) * (B0Y - B1Y) -
-                 (V0X * V0Y * V1Y - V0Y * V0Y * V1X) * pow(T0Y - T1Y, 0.2e1) *
-                 pow((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y, -0.2e1) * (B0X * B1Y - B0Y * B1X)) /
-                ((B0Y - B1Y) * V0X + (-B0X + B1X) * V0Y) / 0.2e1) *
-               (pow(PRX * (V0Y + PRY) - PRY * (V0X + PRX), 0.3e1) * pow(V0Y, -0.3e1) +
-                pow(PLY, 0.3e1) * pow(V0X, 0.3e1) * pow(V0Y, -0.3e1)) / 0.3e1 + (-(0.2e1 * (-V0X * V0Y * V1Y *
-                                                                                            (T0X * T1Y - T0Y * T1X) /
-                                                                                            ((T0Y - T1Y) * V0X +
-                                                                                             (-T0X + T1X) * V0Y) +
-                                                                                            V0Y * V0Y * V1X *
-                                                                                            (T0X * T1Y - T0Y * T1X) /
-                                                                                            ((T0Y - T1Y) * V0X +
-                                                                                             (-T0X + T1X) * V0Y)) *
-                                                                                   (B0X * B1Y - B0Y * B1X) * V0Y * V0Y *
-                                                                                   (B0Y - B1Y) +
-                                                                                   (-V0X * V0Y * V1Y * (T0Y - T1Y) /
-                                                                                    ((T0Y - T1Y) * V0X +
-                                                                                     (-T0X + T1X) * V0Y) +
-                                                                                    V0Y * V0Y * V1X * (T0Y - T1Y) /
-                                                                                    ((T0Y - T1Y) * V0X +
-                                                                                     (-T0X + T1X) * V0Y)) *
-                                                                                   pow(B0X * B1Y - B0Y * B1X, 0.2e1) *
-                                                                                   V0Y * V0Y) * pow((B0Y - B1Y) * V0X +
-                                                                                                    (-B0X + B1X) * V0Y,
-                                                                                                    -0.2e1) *
-                                                                                 pow(V0Y, -0.2e1) / 0.2e1 -
-                                                                                 (-(V0X * V0Y * V1Y - V0Y * V0Y * V1X) *
-                                                                                  pow(T0X * T1Y - T0Y * T1X, 0.2e1) *
-                                                                                  pow((T0Y - T1Y) * V0X +
-                                                                                      (-T0X + T1X) * V0Y, -0.2e1) *
-                                                                                  (B0Y - B1Y) - 0.2e1 *
-                                                                                                (V0X * V0Y * V1Y -
-                                                                                                 V0Y * V0Y * V1X) *
-                                                                                                (T0X * T1Y -
-                                                                                                 T0Y * T1X) *
-                                                                                                (T0Y - T1Y) *
-                                                                                                pow((T0Y - T1Y) * V0X +
-                                                                                                    (-T0X + T1X) * V0Y,
-                                                                                                    -0.2e1) *
-                                                                                                (B0X * B1Y -
-                                                                                                 B0Y * B1X)) /
-                                                                                 ((B0Y - B1Y) * V0X +
-                                                                                  (-B0X + B1X) * V0Y) / 0.2e1) *
-                                                                                (pow(PRX * (V0Y + PRY) -
-                                                                                     PRY * (V0X + PRX), 0.2e1) *
-                                                                                 pow(V0Y, -0.2e1) -
-                                                                                 PLY * PLY * V0X * V0X *
-                                                                                 pow(V0Y, -0.2e1)) / 0.2e1 -
-               (-V0X * V0Y * V1Y * (T0X * T1Y - T0Y * T1X) / ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y) +
-                V0Y * V0Y * V1X * (T0X * T1Y - T0Y * T1X) / ((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y)) *
-               pow(B0X * B1Y - B0Y * B1X, 0.2e1) * pow((B0Y - B1Y) * V0X + (-B0X + B1X) * V0Y, -0.2e1) *
-               ((PRX * (V0Y + PRY) - PRY * (V0X + PRX)) / V0Y + PLY * V0X / V0Y) / 0.2e1 +
-               (V0X * V0Y * V1Y - V0Y * V0Y * V1X) * pow(T0X * T1Y - T0Y * T1X, 0.2e1) *
-               pow((T0Y - T1Y) * V0X + (-T0X + T1X) * V0Y, -0.2e1) * (B0X * B1Y - B0Y * B1X) /
-               ((B0Y - B1Y) * V0X + (-B0X + B1X) * V0Y) *
-               ((PRX * (V0Y + PRY) - PRY * (V0X + PRX)) / V0Y + PLY * V0X / V0Y) / 0.2e1;
 
     }
 
