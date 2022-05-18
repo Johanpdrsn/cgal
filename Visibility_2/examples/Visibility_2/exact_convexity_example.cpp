@@ -158,7 +158,7 @@ private:
 
 
         cout << intRes << endl;
-        return intRes;
+        return 2 * intRes;
     }
 
     static bool face_equality(const CTP::Face_handle &A, const CTP::Face_handle &B) {
@@ -207,12 +207,16 @@ public:
     Segment_2 diagonal;
     unordered_map<Segment_2, Segment_2, SegmentHash> diagMap;
 
+    Kernel::FT generate_tree() {
+        tree.SetRoot(triangles);
+        return decompose_tree_rec(tree.Root());
+    }
+
+
     explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon), tree() {
         triangulate();
         sweep_diagonals();
-        generate_tree(triangles);
 
-        create_event_list();
     }
 
 
@@ -434,9 +438,9 @@ private:
         );
     }
 
-    Kernel::FT create_event_list() {
+    Kernel::FT create_event_list(BinaryTree<CTP>::Node *leftNode, BinaryTree<CTP>::Node *rightNode) {
         vector<Segment_2> crossingDiagonals;
-        find_diagonal_subsets(tree.Root()->left, tree.Root()->right, crossingDiagonals);
+        find_diagonal_subsets(leftNode, rightNode, crossingDiagonals);
 
 
         Kernel::FT final_res = 0;
@@ -610,7 +614,7 @@ private:
                 final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction);
                 final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
 
-                prev(target_in_list, 2)->direction = newCorner.direction;
+//                prev(target_in_list, 2)->direction = newCorner.direction;
                 prev(target_in_list)->direction = newCorner.direction;
                 target_in_list->direction = newCorner.direction;
                 next(target_in_list)->direction = newCorner.direction;
@@ -637,16 +641,16 @@ private:
         return final_res;
     }
 
-    void decompose_tree_rec(BinaryTree<CTP>::Node *node) {
+    Kernel::FT decompose_tree_rec(BinaryTree<CTP>::Node *node) {
         auto leftNode = tree.EmptyNode();
         auto rightNode = tree.EmptyNode();
 
         auto n = count_vertices(node->data);
         auto lowerBound = std::floor((n - 1) / 3.0);
         auto upperBound = std::floor((2 * n - 5) / 3.0);
-
-        if (node->data.size() <= 1) {
-            return;
+        Kernel::FT res = 0;
+        if (node->data.size() == 1) {
+            return 2 * triangulation.triangle(node->data.front()).area();
         } else {
             for (auto face: node->data) {
                 leftNode->data.emplace_back(face);
@@ -683,16 +687,16 @@ private:
                 }
             }
             node->left = leftNode;
-            decompose_tree_rec(leftNode);
+            res += decompose_tree_rec(leftNode);
             node->right = rightNode;
-            decompose_tree_rec(rightNode);
+            res += decompose_tree_rec(rightNode);
+
+            res += create_event_list(leftNode, rightNode);
+            return res;
         }
     }
 
-    void generate_tree(const vector<CTP::Face_handle> &data) {
-        tree.SetRoot(data);
-        decompose_tree_rec(tree.Root());
-    }
+
 };
 
 
@@ -709,20 +713,20 @@ int main() {
 //    polygon.push_back(Point_2{2, 0});
 //    polygon.push_back(Point_2{1, 2});
 
-//    polygon.push_back(Point_2{0, 0});
-//    polygon.push_back(Point_2{2, -2.0});
-//    polygon.push_back(Point_2{2, 0});
-//    polygon.push_back(Point_2{1, 2});
+    polygon.push_back(Point_2{0, 0});
+    polygon.push_back(Point_2{1, -2.0});
+    polygon.push_back(Point_2{2, 0});
+    polygon.push_back(Point_2{2, 2});
 
-    polygon.push_back(Point_2{0.0, 0.0});
-    polygon.push_back(Point_2{-2.0, -1.0});
-    polygon.push_back(Point_2{1.0, -1.0});
-    polygon.push_back(Point_2{1.0, 2.0});
+//    polygon.push_back(Point_2{0.0, 0.0});
+//    polygon.push_back(Point_2{-2.0, -1.0});
+//    polygon.push_back(Point_2{1.0, -1.0});
+//    polygon.push_back(Point_2{1.0, 2.0});
 
 
     auto test = Convexity_measure_exact_2(polygon);
 
-
+    cout << "DONE: " << test.generate_tree() << endl;
 
 
 //    test.tree.prettyPrint();
