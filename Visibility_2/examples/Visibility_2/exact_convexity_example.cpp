@@ -4,7 +4,7 @@
 
 #include <CGAL/Cartesian.h>
 #include <CGAL/Polygon_2.h>
-#include <CGAL/Exact_convexity_measure.h>
+#include <CGAL/Exact_convexity_measure_2.h>
 
 
 typedef CGAL::Cartesian<double> Kernel;
@@ -27,15 +27,15 @@ int main() {
 //    polygon.push_back(Point_2{2, 0});
 //    polygon.push_back(Point_2{1, 2});
 
-//    polygon.push_back(Point_2{0, 0});
-//    polygon.push_back(Point_2{2, -2.0});
-//    polygon.push_back(Point_2{2, 0});
-//    polygon.push_back(Point_2{1, 2});
+    polygon.push_back(Point_2{0, 0});
+    polygon.push_back(Point_2{1, -2.0});
+    polygon.push_back(Point_2{2, 0});
+    polygon.push_back(Point_2{2, 2});
 
-    polygon.push_back(Point_2{0.0, 0.0});
-    polygon.push_back(Point_2{-2.0, -1.0});
-    polygon.push_back(Point_2{1.0, -1.0});
-    polygon.push_back(Point_2{1.0, 2.0});
+//    polygon.push_back(Point_2{0.0, 0.0});
+//    polygon.push_back(Point_2{-2.0, -1.0});
+//    polygon.push_back(Point_2{1.0, -1.0});
+//    polygon.push_back(Point_2{1.0, 2.0});
 
 
     auto test = Convexity_measure_exact_2<Kernel>(polygon);

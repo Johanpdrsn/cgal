@@ -2,8 +2,8 @@
 // Created by Johan Pedersen on 18/05/2022.
 //
 
-#ifndef VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_H
-#define VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_H
+#ifndef VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_2_H
+#define VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_2_H
 
 //
 // Created by Johan Pedersen on 25/04/2022.
@@ -19,12 +19,10 @@
 #include <CGAL/aff_transformation_tags.h>
 #include <CGAL/Visibility_2/NumericalIntegral.h>
 
-using namespace std;
 
 template<class K>
 class Convexity_measure_exact_2 final {
 public:
-
     typedef typename K::Point_2 Point_2;
     typedef typename K::Triangle_2 Triangle_2;
     typedef typename K::Segment_2 Segment_2;
@@ -44,7 +42,7 @@ public:
 
     FT generate_tree() {
         tree.SetRoot(triangles);
-        return decompose_tree_rec(tree.Root());
+        return decompose_tree_rec(tree.Root(), startingDiagonals);
     }
 
 private:
@@ -68,7 +66,7 @@ private:
 
     struct SegmentHash {
         size_t operator()(const Segment_2 &t) const {
-            auto h = hash<double>{};
+            auto h = std::hash<double>{};
             return h(CGAL::to_double((t.source().x()))) ^ h(CGAL::to_double((t.source().y())))
                    ^ h(CGAL::to_double((t.target().x()))) ^ h(CGAL::to_double((t.target().y())));
         }
@@ -76,8 +74,8 @@ private:
 
     struct PointHashFunction {
         size_t operator()(const typename CTP::Point &t) const {
-            return hash<double>()(CGAL::to_double((t.x()))) ^
-                   hash<double>()(CGAL::to_double((t.y())));
+            return std::hash<double>()(CGAL::to_double((t.x()))) ^
+                   std::hash<double>()(CGAL::to_double((t.y())));
         }
     };
 
@@ -92,13 +90,15 @@ private:
         }
     };
 
+    using DiagonalMap = std::unordered_map<Segment_2, Segment_2, SegmentHash>;
+
+
     Polygon_2 polygon;
-    vector<typename CTP::Face_handle> triangles;
+    std::vector<typename CTP::Face_handle> triangles;
 
     CTP triangulation;
     BinaryTree<CTP> tree;
-    Segment_2 diagonal;
-    unordered_map<Segment_2, Segment_2, SegmentHash> diagMap;
+    DiagonalMap startingDiagonals;
 
     // check if 2 faces are equal
     static bool face_equality(const typename CTP::Face_handle &A, const typename CTP::Face_handle &B) {
@@ -112,13 +112,14 @@ private:
     }
 
     // check if face is contained in list of faces
-    static bool face_in_list(const vector<typename CTP::Face_handle> &list, const typename CTP::Face_handle &face) {
+    static bool
+    face_in_list(const std::vector<typename CTP::Face_handle> &list, const typename CTP::Face_handle &face) {
         return std::find_if(list.begin(), list.end(),
                             [&](const typename CTP::Face_handle &A) { return face_equality(A, face); }) != list.end();
     }
 
     // count vertices in list of faces
-    static double count_vertices(const vector<typename CTP::Face_handle> &list) {
+    static double count_vertices(const std::vector<typename CTP::Face_handle> &list) {
         std::unordered_set<typename CTP::Point, PointHashFunction> s;
         for (const auto &face: list) {
             for (int i = 0; i < 3; i++) {
@@ -129,7 +130,7 @@ private:
     }
 
     // check if edge is in list of faces
-    static bool is_edge_in_faces(const vector<typename CTP::Face_handle> &faces, const Segment_2 &seg) {
+    static bool is_edge_in_faces(const std::vector<typename CTP::Face_handle> &faces, const Segment_2 &seg) {
         for (const auto &face: faces) {
             for (int i = 0; i < 3; i++) {
                 if (seg == Segment_2(face->vertex(i)->point(), face->vertex((i + 1) % 3)->point()))
@@ -215,7 +216,7 @@ private:
         return left_plus;
     }
 
-    // find eta edge for diagonal
+    // find eta edge for startingDiagonal
     Segment_2 find_eta(const Segment_2 &s) const {
         bool is_edge = std::any_of(polygon.edges_begin(), polygon.edges_end(),
                                    [&s](const Segment_2 &a) { return a == s; });
@@ -272,14 +273,14 @@ private:
                     // CHeck if point in the visible polygon exists in the input polygon
                     if (vis_point_in_poly && p != v->point()) {
                         auto seg = Segment_2(p, v->point());
-                        diagMap.insert(make_tuple(seg, find_eta(seg)));
+                        startingDiagonals.insert(std::make_tuple(seg, find_eta(seg)));
                     }
                 }
             }
         }
     }
 
-    // find the diagonal splitting two nodes
+    // find the startingDiagonal splitting two nodes
     Segment_2 find_diagonal(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode) const {
         int res;
         for (const auto &leftFace: leftNode->data) {
@@ -289,19 +290,19 @@ private:
                 }
             }
         }
-        throw std::logic_error{"No shared diagonal between polygons"};
+        throw std::logic_error{"No shared startingDiagonal between polygons"};
     }
 
-    // find diagonal subset that cross the splitting diagonal
-    void find_diagonal_subsets(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode,
-                               vector<Segment_2> &crossingDiagonals) {
-        vector<Segment_2> leftDiagonals;
-        vector<Segment_2> rightDiagonals;
+    // find startingDiagonal subset that cross the splitting startingDiagonal
+    std::tuple<DiagonalMap, DiagonalMap, DiagonalMap>
+    find_diagonal_subsets(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode,
+                          DiagonalMap diagonals, const Segment_2 &diagonal) {
+        DiagonalMap leftDiagonals;
+        DiagonalMap rightDiagonals;
+        DiagonalMap crossingDiagonals;
 
-        unordered_set<Point_2, PointHashFunction> leftPoints;
-        unordered_set<Point_2, PointHashFunction> rightPoints;
-
-        diagonal = find_diagonal(leftNode, rightNode);
+        std::unordered_set<Point_2, PointHashFunction> leftPoints;
+        std::unordered_set<Point_2, PointHashFunction> rightPoints;
 
         for (const auto &f: leftNode->data) {
             for (int i = 0; i < 3; i++) {
@@ -314,38 +315,47 @@ private:
             }
         }
 
-        for (const auto &diag: diagMap) {
+        for (const auto &diag: diagonals) {
             if ((leftPoints.count(diag.first.source()) == 1 && rightPoints.count(diag.first.target()) == 1) ||
                 (rightPoints.count(diag.first.source()) == 1 && leftPoints.count(diag.first.target())) == 1) {
-                crossingDiagonals.emplace_back(diag.first);
+                crossingDiagonals[diag.first] = diag.second;
             } else if (leftPoints.count(diag.first.source()) == 1 && leftPoints.count(diag.first.target()) == 1) {
-                leftDiagonals.emplace_back(diag.first);
+                leftDiagonals[diag.first] = diag.second;
             } else if (rightPoints.count(diag.first.source()) == 1 && rightPoints.count(diag.first.target()) == 1) {
-                rightDiagonals.emplace_back(diag.first);
+                rightDiagonals[diag.first] = diag.second;
             }
         }
 
         // update eta edges for left subset
-        for (const auto &s: leftDiagonals) {
-            if (!is_edge_in_faces(leftNode->data, diagMap[s]))
-                diagMap[s] = diagonal;
+        for (auto &s: leftDiagonals) {
+            if (!is_edge_in_faces(leftNode->data, diagonals[s.first]))
+                leftDiagonals[s.first] = diagonal;
         }
 
         // update eta edges for right subset
         for (const auto &s: rightDiagonals) {
-            if (!is_edge_in_faces(rightNode->data, diagMap[s]))
-                diagMap[s] = diagonal;
+            if (!is_edge_in_faces(rightNode->data, diagonals[s.first]))
+                rightDiagonals[s.first] = diagonal;
         }
 
-        // sort crossing diagonals according to the splitting diagonal
+        return make_tuple(leftDiagonals, crossingDiagonals, rightDiagonals);
+    }
+
+    std::vector<Segment_2> sort_diagonals(const DiagonalMap &diagMap, const Segment_2 &splittingDiagonal) {
+        std::vector<Segment_2> crossingDiagonals;
+
+        for (const auto &v: diagMap) {
+            crossingDiagonals.emplace_back(v.first);
+        }
+
         std::sort(crossingDiagonals.begin(), crossingDiagonals.end(),
-                  [this](const Segment_2 &A, const Segment_2 &B) {
-                      if (A == diagonal || A == diagonal.opposite())
+                  [&splittingDiagonal](const Segment_2 &A, const Segment_2 &B) {
+                      if (A == splittingDiagonal || A == splittingDiagonal.opposite())
                           return true;
-                      else if (B == diagonal || B == diagonal.opposite())
+                      else if (B == splittingDiagonal || B == splittingDiagonal.opposite())
                           return false;
                       else {
-                          auto d = std::max(diagonal.direction(), diagonal.opposite().direction());
+                          auto d = std::max(splittingDiagonal.direction(), splittingDiagonal.opposite().direction());
 
                           auto AMin = std::min(A.direction(), A.opposite().direction());
                           auto AMax = std::max(A.direction(), A.opposite().direction());
@@ -355,14 +365,17 @@ private:
 
                           return AMin.counterclockwise_in_between(d, BMin) || AMax.counterclockwise_in_between(d, BMax);
                       }
-                  }
-        );
+                  });
+
+        return crossingDiagonals;
     }
 
     // handles the event list
-    FT create_event_list(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode) {
-        vector<Segment_2> crossingDiagonals;
-        find_diagonal_subsets(leftNode, rightNode, crossingDiagonals);
+    FT create_event_list(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode,
+                         DiagonalMap &diagMap, const Segment_2 &splittingDiagonal) {
+
+        auto crossingDiagonals = sort_diagonals(diagMap, splittingDiagonal);
+
 
         FT final_res = 0;
         auto eventList = std::list<Corner>();
@@ -394,7 +407,7 @@ private:
             auto source_in_list = find(eventList.begin(), eventList.end(), Corner{crossingDiagonal->source()});
 
             if (target_in_list == eventList.end()) {
-                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction, splittingDiagonal);
 
                 lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
 
@@ -410,7 +423,7 @@ private:
             } else if (source_in_list == eventList.end()) {
                 newCorner.target = crossingDiagonal->source();
 
-                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction, splittingDiagonal);
 
                 lastPlaced = (eventList.insert(next(lastPlaced), newCorner));
 
@@ -430,11 +443,11 @@ private:
                                            A.source() == crossingDiagonal->target()) &&
                                           A.opposite() != *crossingDiagonal;
                                }) == crossingDiagonals.end() &&
-                       crossingDiagonal->target() != diagonal.target() &&
-                       crossingDiagonal->target() != diagonal.source()) {
+                       crossingDiagonal->target() != splittingDiagonal.target() &&
+                       crossingDiagonal->target() != splittingDiagonal.source()) {
 
-                final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction);
-                final_res += calc(*(target_in_list), *next(target_in_list, 1), newCorner.direction);
+                final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction, splittingDiagonal);
+                final_res += calc(*(target_in_list), *next(target_in_list, 1), newCorner.direction, splittingDiagonal);
 
                 lastPlaced = prev(target_in_list);
 
@@ -450,11 +463,12 @@ private:
                                    return (A.target() == crossingDiagonal->source() ||
                                            A.source() == crossingDiagonal->source()) &&
                                           A.opposite() != *crossingDiagonal;
-                               }) == crossingDiagonals.end() && crossingDiagonal->source() != diagonal.target() &&
-                       crossingDiagonal->source() != diagonal.source()) {
+                               }) == crossingDiagonals.end() &&
+                       crossingDiagonal->source() != splittingDiagonal.target() &&
+                       crossingDiagonal->source() != splittingDiagonal.source()) {
 
-                final_res += calc(*prev(source_in_list), *(source_in_list), newCorner.direction);
-                final_res += calc(*(source_in_list), *next(source_in_list, 1), newCorner.direction);
+                final_res += calc(*prev(source_in_list), *(source_in_list), newCorner.direction, splittingDiagonal);
+                final_res += calc(*(source_in_list), *next(source_in_list, 1), newCorner.direction, splittingDiagonal);
 
                 lastPlaced = prev(source_in_list);
 
@@ -465,9 +479,9 @@ private:
 
                 eventList.erase(source_in_list);
             } else {
-                final_res += calc(*prev(lastPlaced, 2), *prev(lastPlaced), newCorner.direction);
-                final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction);
-                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction);
+                final_res += calc(*prev(lastPlaced, 2), *prev(lastPlaced), newCorner.direction, splittingDiagonal);
+                final_res += calc(*prev(lastPlaced), *(lastPlaced), newCorner.direction, splittingDiagonal);
+                final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction, splittingDiagonal);
 
 //                prev(target_in_list, 2)->direction = newCorner.direction;
                 prev(target_in_list)->direction = newCorner.direction;
@@ -482,13 +496,13 @@ private:
                 lastPlaced = prev(lastPlaced);
             }
         }
-        final_res += calc(*(lastPlaced), *next(lastPlaced), f.direction());
+        final_res += calc(*(lastPlaced), *next(lastPlaced), f.direction(), splittingDiagonal);
 
         return final_res;
     }
 
     // compute contribution from trapezoid
-    FT calc(const Corner &c1, const Corner &c2, const Direction_2 &newDir) const {
+    FT calc(const Corner &c1, const Corner &c2, const Direction_2 &newDir, const Segment_2 &diagonal) const {
         auto dia = std::min(diagonal.direction(), diagonal.opposite().direction());
 
         FT t = dia.dy() == 0 ? 0 : atan(dia.dy() / dia.dx());
@@ -523,7 +537,7 @@ private:
         return 2 * intRes;
     }
 
-    FT decompose_tree_rec(typename BinaryTree<CTP>::Node *node) {
+    FT decompose_tree_rec(typename BinaryTree<CTP>::Node *node, const DiagonalMap &diagonals) {
         auto leftNode = tree.EmptyNode();
         auto rightNode = tree.EmptyNode();
 
@@ -533,8 +547,7 @@ private:
 
         FT res = 0;
         if (node->data.size() == 1) {
-            auto temp = 2 * triangulation.triangle(node->data.front()).area();
-            return temp;
+            return 2 * triangulation.triangle(node->data.front()).area();
         } else {
             for (auto face: node->data) {
                 leftNode->data.emplace_back(face);
@@ -571,14 +584,19 @@ private:
                 }
             }
             node->left = leftNode;
-            res += decompose_tree_rec(leftNode);
             node->right = rightNode;
-            res += decompose_tree_rec(rightNode);
+            auto diagonal = find_diagonal(leftNode, rightNode);
 
-            res += create_event_list(leftNode, rightNode);
+            auto diagonalSets = find_diagonal_subsets(leftNode, rightNode, diagonals, diagonal);
+
+
+            res += decompose_tree_rec(leftNode, get<0>(diagonalSets));
+            res += decompose_tree_rec(rightNode, get<2>(diagonalSets));
+
+            res += create_event_list(leftNode, rightNode, get<1>(diagonalSets), diagonal);
             return res;
         }
     }
 };
 
-#endif //VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_H
+#endif //VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_2_H
