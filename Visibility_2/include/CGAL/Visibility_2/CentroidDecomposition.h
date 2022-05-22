@@ -1,10 +1,10 @@
 template<class T>
 struct CentroidDecomposition {
 
-    std::map<int, std::set<int>> tree;
-    std::map<int, int> size;
+    std::unordered_map<int, std::unordered_set<int>> tree;
+    std::unordered_map<int, int> size;
     int id;
-    std::set<int> left, right;
+    std::unordered_set<int> left, right;
 
     CentroidDecomposition(const std::vector<T> &data) : tree(create_adjacency_list(data)) {
         int n = tree.size();
@@ -57,7 +57,7 @@ struct CentroidDecomposition {
         }
     }
 
-    void find_graph(std::set<int> &s) {
+    void find_graph(std::unordered_set<int> &s) {
         int temp;
         do {
             temp = s.size();
@@ -68,16 +68,16 @@ struct CentroidDecomposition {
 
     }
 
-    std::map<int, std::set<int>> create_adjacency_list(const std::vector<T> &data) {
+    std::unordered_map<int, std::unordered_set<int>> create_adjacency_list(const std::vector<T> &data) {
 
-        std::set<int> ids;
+        std::unordered_set<int> ids;
         std::for_each(data.begin(), data.end(),
                       [&ids](const T &A) { ids.insert(A->info().id); });
 
-        std::map<int, std::set<int>> t;
+        std::unordered_map<int, std::unordered_set<int>> t;
 
         for (const auto &f: data) {
-            std::set<int> s;
+            std::unordered_set<int> s;
             for (int i = 0; i < 3; i++) {
                 auto neigh = f->neighbor(i);
                 if (neigh != nullptr && neigh->info().in_domain() && ids.count(neigh->info().id) > 0) {

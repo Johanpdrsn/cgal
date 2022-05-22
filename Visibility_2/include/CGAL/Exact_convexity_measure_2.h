@@ -558,11 +558,6 @@ private:
         auto leftNode = tree.EmptyNode();
         auto rightNode = tree.EmptyNode();
 
-        auto n = count_vertices(node->data);
-        auto lowerBound = std::floor((n - 1) / 3.0);
-        auto upperBound = std::floor((2 * n - 5) / 3.0);
-
-
         CentroidDecomposition<Face_handle> centroidDecomposition{node->data};
         auto centroid = std::find_if(node->data.begin(), node->data.end(),
                                      [&centroidDecomposition](const Face_handle &A) {
@@ -578,17 +573,8 @@ private:
                 } else if (centroidDecomposition.right.count(face->info().id) > 0) {
                     rightNode->data.emplace_back(face);
                 } else {
-                    cout << "MIssing face: " << face->info().id << ": " << triangulation.triangle(face) << endl;
                     throw std::logic_error("Face should belong to left or right set");
                 }
-            }
-            cout << "LEFT" << endl;
-            for (auto a: leftNode->data) {
-                cout << triangulation.triangle(a) << a->info().id << endl;
-            }
-            cout << "Right" << endl;
-            for (auto a: rightNode->data) {
-                cout << triangulation.triangle(a) << a->info().id << endl;
             }
 
             node->left = leftNode;
@@ -596,8 +582,7 @@ private:
             auto diagonal = find_diagonal(*centroid, rightNode);
 
             auto diagonalSets = find_diagonal_subsets(leftNode, rightNode, diagonals, diagonal);
-
-
+            
             res += decompose_tree_rec(leftNode, get<0>(diagonalSets));
             res += decompose_tree_rec(rightNode, get<2>(diagonalSets));
 
