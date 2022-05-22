@@ -4,6 +4,7 @@ struct CentroidDecomposition {
     std::map<int, std::set<int>> tree;
     std::map<int, int> size;
     int id;
+    std::set<int> left, right;
 
     CentroidDecomposition(const std::vector<T> &data) : tree(create_adjacency_list(data)) {
         int n = tree.size();
@@ -33,6 +34,38 @@ struct CentroidDecomposition {
         if (p == -1)
             p = c;
         id = p;
+
+        left.insert(p);
+        for (auto v: tree[id]) {
+            tree[v].erase(id);
+        }
+
+        if (tree[p].size() == 0) {
+            return;
+        } else if (tree[p].size() == 1) {
+            right.insert(*(tree[p].begin()));
+        } else {
+            left.insert(*tree[p].begin());
+            right.insert(*next(tree[p].begin()));
+
+            tree.erase(p);
+
+            find_graph(left);
+            find_graph(right);
+
+            left.size() < right.size() ? left.insert(p) : right.insert(p);
+        }
+    }
+
+    void find_graph(std::set<int> &s) {
+        int temp;
+        do {
+            temp = s.size();
+            for (auto a: s) {
+                s.insert(tree[a].begin(), tree[a].end());
+            }
+        } while (temp != s.size());
+
     }
 
     std::map<int, std::set<int>> create_adjacency_list(const std::vector<T> &data) {

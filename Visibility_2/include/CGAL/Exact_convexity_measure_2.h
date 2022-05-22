@@ -5,24 +5,24 @@
 #ifndef VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_2_H
 #define VISIBILITY_2_EXAMPLES_EXACT_CONVEXITY_MEASURE_2_H
 
-//
-// Created by Johan Pedersen on 25/04/2022.
-//
-
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Constrained_triangulation_plus_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
-#include <CGAL/Visibility_2/BinaryTree.h>
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Rotational_sweep_visibility_2.h>
 #include <CGAL/aff_transformation_tags.h>
+
+#include <CGAL/Visibility_2/BinaryTree.h>
 #include <CGAL/Visibility_2/NumericalIntegral.h>
 #include <CGAL/Visibility_2/CentroidDecomposition.h>
 
-template<class K>
+using namespace std;
+
 class Convexity_measure_exact_2 final {
 public:
+    typedef CGAL::Cartesian<double> K;
+
     typedef typename K::Point_2 Point_2;
     typedef typename K::Triangle_2 Triangle_2;
     typedef typename K::Segment_2 Segment_2;
@@ -197,6 +197,11 @@ private:
                 face->info().id = id++;
                 triangles.emplace_back(face);
             }
+        }
+
+        std::cout << "TRIANGULATION" << std::endl;
+        for (auto a: triangles) {
+            std::cout << triangulation.triangle(a) << a->info().id << std::endl;
         }
     }
 
@@ -379,7 +384,7 @@ private:
                          DiagonalMap &diagMap, const Segment_2 &splittingDiagonal) {
 
         auto crossingDiagonals = sort_diagonals(diagMap, splittingDiagonal);
-
+        cout << "SPLIT" << splittingDiagonal << endl;
 
         FT final_res = 0;
         auto eventList = std::list<Corner>();
@@ -395,6 +400,7 @@ private:
         eventList.push_front({f.target(), diagMap[b], diagMap[f], b.direction()});
         eventList.push_back({b.target(), diagMap[b], diagMap[f], b.direction()});
 
+
         auto lastPlaced = eventList.begin();
 
         for (auto crossingDiagonal = crossingDiagonals.begin();
@@ -409,6 +415,14 @@ private:
                                 crossingDiagonal->direction()};
             auto target_in_list = find(eventList.begin(), eventList.end(), newCorner);
             auto source_in_list = find(eventList.begin(), eventList.end(), Corner{crossingDiagonal->source()});
+
+
+            for (auto a: eventList) {
+                cout << a.target << endl;
+            }
+            cout << "Last placed: " << lastPlaced->target << endl;
+            cout << crossingDiagonal->direction() << endl;
+
 
             if (target_in_list == eventList.end()) {
                 final_res += calc(*(lastPlaced), *next(lastPlaced), newCorner.direction, splittingDiagonal);
@@ -501,7 +515,7 @@ private:
             }
         }
         final_res += calc(*(lastPlaced), *next(lastPlaced), f.direction(), splittingDiagonal);
-
+        cout << "Sweep: " << final_res << endl;
         return final_res;
     }
 
@@ -548,50 +562,29 @@ private:
         auto lowerBound = std::floor((n - 1) / 3.0);
         auto upperBound = std::floor((2 * n - 5) / 3.0);
 
-        std::set<int> rightIds;
 
-        auto centId = CentroidDecomposition<Face_handle>{node->data};
-
-        auto centroid = *std::find_if(node->data.begin(), node->data.end(),
-                                      [&centId](const Face_handle &A) { return centId.id == A->info().id; });
+        CentroidDecomposition<Face_handle> centroidDecomposition{node->data};
 
         FT res = 0;
         if (node->data.size() == 1) {
             return 2 * triangulation.triangle(node->data.front()).area();
         } else {
-            leftNode->data.emplace_back(centroid);
-            centroid->tds_data().mark_processed();
-            int i = 0;
-            while (i < upperBound) {
-
-                // Find face that is in the input list and has not been added to the left node
-                for (int i = 0; i < 3; i++) {
-                    centroid = centroid->neighbor(i);
-                    if (face_in_list(node->data, centroid) && leftNode->data.size() + 1 <= upperBound &&
-                        !centroid->tds_data().processed()) {
-                        centroid->tds_data().mark_processed();
-                        leftNode->data.emplace_back(centroid);
-                        break;
-                    }
+            for (auto face: node->data) {
+                if (centroidDecomposition.left.count(face->info().id) == 0) {
+                    leftNode->data.emplace_back(face);
+                } else if (centroidDecomposition.right.count(face->info().id) == 0) {
+                    rightNode->data.emplace_back(face);
+                } else {
+                    throw std::logic_error("Face should belong to left or right set");
                 }
-                ++i;
-            }
 
-            // add unmark faced to right
-            for (auto f: node->data) {
-                f->tds_data().clear();
-                if (!face_in_list(leftNode->data, f)) {
-                    rightNode->data.emplace_back(f);
-                    rightIds.insert(f->info().id);
-                }
             }
-
             node->left = leftNode;
             node->right = rightNode;
-
             auto diagonal = find_diagonal(leftNode->data.front(), rightNode);
 
             auto diagonalSets = find_diagonal_subsets(leftNode, rightNode, diagonals, diagonal);
+
 
             res += decompose_tree_rec(leftNode, get<0>(diagonalSets));
             res += decompose_tree_rec(rightNode, get<2>(diagonalSets));
