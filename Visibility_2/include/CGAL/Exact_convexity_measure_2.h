@@ -564,24 +564,36 @@ private:
 
 
         CentroidDecomposition<Face_handle> centroidDecomposition{node->data};
-
+        auto centroid = std::find_if(node->data.begin(), node->data.end(),
+                                     [&centroidDecomposition](const Face_handle &A) {
+                                         return A->info().id == centroidDecomposition.id;
+                                     });
         FT res = 0;
         if (node->data.size() == 1) {
             return 2 * triangulation.triangle(node->data.front()).area();
         } else {
             for (auto face: node->data) {
-                if (centroidDecomposition.left.count(face->info().id) == 0) {
+                if (centroidDecomposition.left.count(face->info().id) > 0) {
                     leftNode->data.emplace_back(face);
-                } else if (centroidDecomposition.right.count(face->info().id) == 0) {
+                } else if (centroidDecomposition.right.count(face->info().id) > 0) {
                     rightNode->data.emplace_back(face);
                 } else {
+                    cout << "MIssing face: " << face->info().id << ": " << triangulation.triangle(face) << endl;
                     throw std::logic_error("Face should belong to left or right set");
                 }
-
             }
+            cout << "LEFT" << endl;
+            for (auto a: leftNode->data) {
+                cout << triangulation.triangle(a) << a->info().id << endl;
+            }
+            cout << "Right" << endl;
+            for (auto a: rightNode->data) {
+                cout << triangulation.triangle(a) << a->info().id << endl;
+            }
+
             node->left = leftNode;
             node->right = rightNode;
-            auto diagonal = find_diagonal(leftNode->data.front(), rightNode);
+            auto diagonal = find_diagonal(*centroid, rightNode);
 
             auto diagonalSets = find_diagonal_subsets(leftNode, rightNode, diagonals, diagonal);
 

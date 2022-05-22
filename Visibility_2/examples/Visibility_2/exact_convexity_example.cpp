@@ -38,15 +38,15 @@ int main() {
 //    polygon.push_back(Point_2{0, 0});
 
 
-    polygon.push_back(Point_2{0, 0});
-    polygon.push_back(Point_2{2, -2.0});
-    polygon.push_back(Point_2{2, 0});
-    polygon.push_back(Point_2{1, 2});
+//    polygon.push_back(Point_2{0, 0});
+//    polygon.push_back(Point_2{2, -2.0});
+//    polygon.push_back(Point_2{2, 0});
+//    polygon.push_back(Point_2{1, 2});
 
-//    polygon.push_back(Point_2{0.0, 0.0});
-//    polygon.push_back(Point_2{-2.0, -1.0});
-//    polygon.push_back(Point_2{1.0, -1.0});
-//    polygon.push_back(Point_2{1.0, 2.0});
+    polygon.push_back(Point_2{0.0, 0.0});
+    polygon.push_back(Point_2{-2.0, -1.0});
+    polygon.push_back(Point_2{1.0, -1.0});
+    polygon.push_back(Point_2{1.0, 2.0});
 
 
     auto test = Convexity_measure_exact_2(polygon);
