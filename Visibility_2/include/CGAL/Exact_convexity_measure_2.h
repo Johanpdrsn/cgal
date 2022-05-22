@@ -18,7 +18,7 @@
 #include <CGAL/Rotational_sweep_visibility_2.h>
 #include <CGAL/aff_transformation_tags.h>
 #include <CGAL/Visibility_2/NumericalIntegral.h>
-
+#include <CGAL/Visibility_2/CentroidDecomposition.h>
 
 template<class K>
 class Convexity_measure_exact_2 final {
@@ -50,6 +50,7 @@ private:
         FaceInfo2() = default;
 
         int nesting_level;
+        int id;
 
         bool in_domain() const {
             return nesting_level % 2 == 1;
@@ -63,6 +64,8 @@ private:
     typedef CGAL::Exact_intersections_tag Itag;
     typedef typename CGAL::Constrained_triangulation_2<K, TDS, Itag> CT;
     typedef CGAL::Constrained_triangulation_plus_2<CT> CTP;
+    typedef typename CTP::Face_handle Face_handle;
+
 
     struct SegmentHash {
         size_t operator()(const Segment_2 &t) const {
@@ -94,14 +97,14 @@ private:
 
 
     Polygon_2 polygon;
-    std::vector<typename CTP::Face_handle> triangles;
+    std::vector<Face_handle> triangles;
 
     CTP triangulation;
     BinaryTree<CTP> tree;
     DiagonalMap startingDiagonals;
 
     // check if 2 faces are equal
-    static bool face_equality(const typename CTP::Face_handle &A, const typename CTP::Face_handle &B) {
+    static bool face_equality(const Face_handle &A, const Face_handle &B) {
         std::unordered_set<typename CTP::Point, PointHashFunction> s{A->vertex(0)->point(), A->vertex(1)->point(),
                                                                      A->vertex(2)->point()};
         for (int i = 0; i < 3; i++) {
@@ -113,13 +116,13 @@ private:
 
     // check if face is contained in list of faces
     static bool
-    face_in_list(const std::vector<typename CTP::Face_handle> &list, const typename CTP::Face_handle &face) {
+    face_in_list(const std::vector<Face_handle> &list, const Face_handle &face) {
         return std::find_if(list.begin(), list.end(),
-                            [&](const typename CTP::Face_handle &A) { return face_equality(A, face); }) != list.end();
+                            [&](const Face_handle &A) { return face_equality(A, face); }) != list.end();
     }
 
     // count vertices in list of faces
-    static double count_vertices(const std::vector<typename CTP::Face_handle> &list) {
+    static double count_vertices(const std::vector<Face_handle> &list) {
         std::unordered_set<typename CTP::Point, PointHashFunction> s;
         for (const auto &face: list) {
             for (int i = 0; i < 3; i++) {
@@ -130,7 +133,7 @@ private:
     }
 
     // check if edge is in list of faces
-    static bool is_edge_in_faces(const std::vector<typename CTP::Face_handle> &faces, const Segment_2 &seg) {
+    static bool is_edge_in_faces(const std::vector<Face_handle> &faces, const Segment_2 &seg) {
         for (const auto &face: faces) {
             for (int i = 0; i < 3; i++) {
                 if (seg == Segment_2(face->vertex(i)->point(), face->vertex((i + 1) % 3)->point()))
@@ -141,22 +144,22 @@ private:
     }
 
     static void mark_domains(CTP &ctp,
-                             typename CTP::Face_handle start,
+                             Face_handle start,
                              int index,
                              std::list<typename CTP::Edge> &border) {
         if (start->info().nesting_level != -1) {
             return;
         }
-        std::list<typename CTP::Face_handle> queue;
+        std::list<Face_handle> queue;
         queue.push_back(start);
         while (!queue.empty()) {
-            typename CTP::Face_handle fh = queue.front();
+            Face_handle fh = queue.front();
             queue.pop_front();
             if (fh->info().nesting_level == -1) {
                 fh->info().nesting_level = index;
                 for (int i = 0; i < 3; ++i) {
                     typename CTP::Edge e(fh, i);
-                    typename CTP::Face_handle n = fh->neighbor(i);
+                    Face_handle n = fh->neighbor(i);
                     if (n->info().nesting_level == -1) {
                         if (ctp.is_constrained(e)) border.push_back(e);
                         else queue.push_back(n);
@@ -167,7 +170,7 @@ private:
     }
 
     static void mark_domains(CTP &ctp) {
-        for (typename CTP::Face_handle f: ctp.all_face_handles()) {
+        for (Face_handle f: ctp.all_face_handles()) {
             f->info().nesting_level = -1;
         }
         std::list<typename CTP::Edge> border;
@@ -175,7 +178,7 @@ private:
         while (!border.empty()) {
             const typename CTP::Edge e = border.front();
             border.pop_front();
-            typename CTP::Face_handle n = e.first->neighbor(e.second);
+            Face_handle n = e.first->neighbor(e.second);
             if (n->info().nesting_level == -1) {
                 mark_domains(ctp, n, e.first->info().nesting_level + 1, border);
             }
@@ -186,10 +189,12 @@ private:
         triangulation.insert_constraint(polygon.vertices_begin(), polygon.vertices_end(), true);
         mark_domains(triangulation);
 
+        int id = 0;
         for (const auto &face: triangulation.finite_face_handles()) {
             if (!face->info().in_domain()) {
                 triangulation.delete_face(face);
             } else {
+                face->info().id = id++;
                 triangles.emplace_back(face);
             }
         }
@@ -281,15 +286,14 @@ private:
     }
 
     // find the startingDiagonal splitting two nodes
-    Segment_2 find_diagonal(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode) const {
+    Segment_2 find_diagonal(const Face_handle &leftFace, typename BinaryTree<CTP>::Node *rightNode) const {
         int res;
-        for (const auto &leftFace: leftNode->data) {
-            for (const auto &rightFace: rightNode->data) {
-                if (leftFace->has_neighbor(rightFace, res)) {
-                    return Segment_2(triangulation.segment(typename CTP::Edge{leftFace, res}));
-                }
+        for (const auto &rightFace: rightNode->data) {
+            if (leftFace->has_neighbor(rightFace, res)) {
+                return Segment_2(triangulation.segment(typename CTP::Edge{leftFace, res}));
             }
         }
+
         throw std::logic_error{"No shared startingDiagonal between polygons"};
     }
 
@@ -528,14 +532,13 @@ private:
         BOT0 = trans(BOT0);
         BOT1 = trans(BOT1);
 
-        FT intRes = intRes = Integral<FT>::ComputeOpt(TOP0.x(), TOP0.y(), TOP1.x(), TOP1.y(),
-                                                      BOT0.x(), BOT0.y(), BOT1.x(), BOT1.y(),
-                                                      0, PL.y(), PR.x(), PR.y(),
-                                                      V0.dx(), V0.dy(), V1.dx(), V1.dy(),
-                                                      0.0, 1.0);
-
-        return 2 * intRes;
+        return 2 * Integral<FT>::ComputeOpt(TOP0.x(), TOP0.y(), TOP1.x(), TOP1.y(),
+                                            BOT0.x(), BOT0.y(), BOT1.x(), BOT1.y(),
+                                            0, PL.y(), PR.x(), PR.y(),
+                                            V0.dx(), V0.dy(), V1.dx(), V1.dy(),
+                                            0.0, 1.0);
     }
+
 
     FT decompose_tree_rec(typename BinaryTree<CTP>::Node *node, const DiagonalMap &diagonals) {
         auto leftNode = tree.EmptyNode();
@@ -545,50 +548,50 @@ private:
         auto lowerBound = std::floor((n - 1) / 3.0);
         auto upperBound = std::floor((2 * n - 5) / 3.0);
 
+        std::set<int> rightIds;
+
+        auto centId = CentroidDecomposition<Face_handle>{node->data};
+
+        auto centroid = *std::find_if(node->data.begin(), node->data.end(),
+                                      [&centId](const Face_handle &A) { return centId.id == A->info().id; });
+
         FT res = 0;
         if (node->data.size() == 1) {
             return 2 * triangulation.triangle(node->data.front()).area();
         } else {
-            for (auto face: node->data) {
-                leftNode->data.emplace_back(face);
-                face->tds_data().mark_processed();
-                while (true) {
+            leftNode->data.emplace_back(centroid);
+            centroid->tds_data().mark_processed();
+            int i = 0;
+            while (i < upperBound) {
 
-                    // Find face that is in the input list and has not been added to the left node
-                    for (int i = 0; i < 3; i++) {
-                        face = face->neighbor(i);
-                        if (face_in_list(node->data, face) && !face->tds_data().processed())
-                            break;
-                    }
-
-                    // If the size of the leftNode is smaller than bound add it and mark the face
-                    if (static_cast<double>(leftNode->data.size()) + 1 <= upperBound) {
-                        face->tds_data().mark_processed();
-                        leftNode->data.emplace_back(face);
-                    } else {
+                // Find face that is in the input list and has not been added to the left node
+                for (int i = 0; i < 3; i++) {
+                    centroid = centroid->neighbor(i);
+                    if (face_in_list(node->data, centroid) && leftNode->data.size() + 1 <= upperBound &&
+                        !centroid->tds_data().processed()) {
+                        centroid->tds_data().mark_processed();
+                        leftNode->data.emplace_back(centroid);
                         break;
                     }
                 }
+                ++i;
+            }
 
-                // If the left node list is larger than the lower bound add unmark faced to right
-                if (static_cast<double>(leftNode->data.size()) >= lowerBound) {
-                    for (auto f: node->data) {
-                        f->tds_data().clear();
-                        if (!face_in_list(leftNode->data, f))
-                            rightNode->data.emplace_back(f);
-                    }
-                    break;
-                } else {
-                    leftNode->data.clear();
-                    rightNode->data.clear();
+            // add unmark faced to right
+            for (auto f: node->data) {
+                f->tds_data().clear();
+                if (!face_in_list(leftNode->data, f)) {
+                    rightNode->data.emplace_back(f);
+                    rightIds.insert(f->info().id);
                 }
             }
+
             node->left = leftNode;
             node->right = rightNode;
-            auto diagonal = find_diagonal(leftNode, rightNode);
+
+            auto diagonal = find_diagonal(leftNode->data.front(), rightNode);
 
             auto diagonalSets = find_diagonal_subsets(leftNode, rightNode, diagonals, diagonal);
-
 
             res += decompose_tree_rec(leftNode, get<0>(diagonalSets));
             res += decompose_tree_rec(rightNode, get<2>(diagonalSets));
