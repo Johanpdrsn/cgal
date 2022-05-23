@@ -21,7 +21,7 @@ using namespace std;
 
 class Convexity_measure_exact_2 final {
 public:
-    typedef CGAL::Cartesian<double> K;
+    typedef CGAL::Simple_cartesian<double> K;
 
     typedef typename K::Point_2 Point_2;
     typedef typename K::Triangle_2 Triangle_2;
@@ -295,10 +295,20 @@ private:
         int res;
         for (const auto &rightFace: rightNode->data) {
             if (leftFace->has_neighbor(rightFace, res)) {
-                return Segment_2(triangulation.segment(typename CTP::Edge{leftFace, res}));
+                auto s =  triangulation.segment(typename CTP::Edge{leftFace, res});
+
+                if (s.is_horizontal() && s.direction().dx() > 1){
+                    return s;
+
+                }else if(s.is_vertical() && s.direction().dy()>0){
+                    return s.opposite();
+                }
+                else
+                    return s.direction() < s.opposite().direction() ? s : s.opposite();
+
+
             }
         }
-
         throw std::logic_error{"No shared startingDiagonal between polygons"};
     }
 
@@ -381,12 +391,18 @@ private:
         return crossingDiagonals;
     }
 
+
+
     // handles the event list
     FT create_event_list(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode,
                          DiagonalMap &diagMap, const Segment_2 &splittingDiagonal) {
 
         auto crossingDiagonals = sort_diagonals(diagMap, splittingDiagonal);
+        FT t = splittingDiagonal.direction().dy() == 0 ? 0 : atan(
+                splittingDiagonal.direction().dy() / splittingDiagonal.direction().dx());
+        typename K::Aff_transformation_2 rotate(CGAL::ROTATION, sin(-t), cos(-t));
 
+        cout << "SPLIT: " << splittingDiagonal.source() << splittingDiagonal.target() << endl;
         FT final_res = 0;
         auto eventList = std::list<Corner>();
 
@@ -394,23 +410,41 @@ private:
         auto b = crossingDiagonals[1];
         crossingDiagonals.erase(crossingDiagonals.begin(), next(crossingDiagonals.begin(), 2));
 
-        if (f.target().x() > b.target().x()) {
-            std::swap(f, b);
-        }
+//        if (f.target().x() > b.target().x()) {
+//            std::swap(f, b);
+//        }
 
-        eventList.push_front({f.target(), diagMap[b], diagMap[f], b.direction()});
-        eventList.push_back({b.target(), diagMap[b], diagMap[f], b.direction()});
+        std::unordered_set<Point_2,PointHashFunction> leftVertices;
+        std::for_each(leftNode->data.begin(), leftNode->data.end(),[&leftVertices](const Face_handle& A){
+            for (int i = 0; i < 3; ++i) {
+                leftVertices.insert(A->vertex(i)->point());
+            }});
 
 
+
+
+
+        eventList.push_front({splittingDiagonal.source(), diagMap[f], diagMap[b], f.direction()});
+        eventList.push_back({splittingDiagonal.target(), diagMap[f], diagMap[b], f.direction()});
+
+
+
+
+
+
+
+        
         auto lastPlaced = eventList.begin();
 
         for (auto crossingDiagonal = crossingDiagonals.begin();
              crossingDiagonal != crossingDiagonals.end(); crossingDiagonal++) {
 
 
-            if (crossingDiagonal->direction() > crossingDiagonal->opposite().direction()) {
+            if (rotate(crossingDiagonal->direction()) >= rotate(crossingDiagonal->opposite().direction())) {
                 continue;
             }
+            cout << crossingDiagonal->direction() << crossingDiagonal->opposite().direction() << endl;
+            cout << rotate(crossingDiagonal->direction()) << rotate(crossingDiagonal->direction()) << endl;
 
             Corner newCorner = {crossingDiagonal->target(), diagMap[*crossingDiagonal],
                                 diagMap[crossingDiagonal->opposite()].opposite(),
@@ -418,6 +452,7 @@ private:
             auto target_in_list = find(eventList.begin(), eventList.end(), newCorner);
             auto source_in_list = find(eventList.begin(), eventList.end(), Corner{crossingDiagonal->source()});
 
+            cout << "DIAGONAL: " << *crossingDiagonal << endl;
             cout << "EVENTS" << endl;
             for (auto a: eventList) {
                 cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
@@ -438,13 +473,18 @@ private:
                 source_in_list->bot = newCorner.bot;
 
 
-
                 // on bot
             } else if (source_in_list == eventList.end()) {
                 cout << "APPEARANCE BOT: " << crossingDiagonal->source() << crossingDiagonal->direction() << endl;
                 cout << "TARGET: " << target_in_list->target << endl;
-                cout << prev(target_in_list)->target << endl;
+                if(target_in_list==eventList.begin())
+                    target_in_list = next(eventList.begin(),1);
+
+                    cout << prev(target_in_list)->target << endl;
                 newCorner.target = crossingDiagonal->source();
+
+
+
 
                 final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction, splittingDiagonal);
                 lastPlaced = (eventList.insert((target_in_list), newCorner));
@@ -530,7 +570,7 @@ private:
         }
         cout << f.direction() << endl;
 
-        final_res += calc(*(eventList.begin()), *prev(eventList.end()), f.direction(), splittingDiagonal);
+        final_res += calc(*(eventList.begin()), *prev(eventList.end()), b.direction(), splittingDiagonal);
         cout << "Sweep: " << final_res << endl;
         return final_res;
     }

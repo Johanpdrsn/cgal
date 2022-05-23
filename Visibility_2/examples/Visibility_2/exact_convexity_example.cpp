@@ -7,7 +7,7 @@
 #include <CGAL/Exact_convexity_measure_2.h>
 
 
-typedef CGAL::Cartesian<double> Kernel;
+typedef CGAL::Simple_cartesian<double> Kernel;
 typedef Kernel::Point_2 Point_2;
 typedef CGAL::Polygon_2<Kernel> Polygon_2;
 
