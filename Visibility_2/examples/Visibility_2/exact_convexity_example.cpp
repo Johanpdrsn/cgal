@@ -19,37 +19,15 @@ int main() {
 
     Polygon_2 polygon;
 
-//    polygon.push_back(Point_2{0, 0});
-//    polygon.push_back(Point_2{-2, -1});
-//    polygon.push_back(Point_2{0, -2});
-//    polygon.push_back(Point_2{1, -4});
-//    polygon.push_back(Point_2{2, -2});
-//    polygon.push_back(Point_2{4, -1});
-//    polygon.push_back(Point_2{2, 0});
-//    polygon.push_back(Point_2{1, 2});
-
-    polygon.push_back(Point_2{0, 1});
-    polygon.push_back(Point_2{1, 2});
-    polygon.push_back(Point_2{3, 0});
-    polygon.push_back(Point_2{6, 3});
-    polygon.push_back(Point_2{6, 2});
-    polygon.push_back(Point_2{3, -1});
-    polygon.push_back(Point_2{1, 1});
     polygon.push_back(Point_2{0, 0});
+    polygon.push_back(Point_2{1, -2.0});
+    polygon.push_back(Point_2{2, 0});
+    polygon.push_back(Point_2{2, 2});
 
 
-//    polygon.push_back(Point_2{0, 0});
-//    polygon.push_back(Point_2{2, -2.0});
-//    polygon.push_back(Point_2{2, 0});
-//    polygon.push_back(Point_2{1, 2});
-
-//    polygon.push_back(Point_2{0.0, 0.0});
-//    polygon.push_back(Point_2{-2.0, -1.0});
-//    polygon.push_back(Point_2{1.0, -1.0});
-//    polygon.push_back(Point_2{1.0, 2.0});
 
 
-    auto test = Convexity_measure_exact_2(polygon);
+    auto test = Convexity_measure_exact_2<Kernel>(polygon);
 
     cout << "Result: " << test.measure_convexity() << endl;
 

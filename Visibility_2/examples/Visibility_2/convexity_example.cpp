@@ -81,56 +81,24 @@ int main() {
     std::chrono::duration<double, std::milli> ms_double{};
     Kernel::FT two_points;
     Kernel::FT pol_vis;
-
+    int N = 10000;
 
     Polygon_2 polygon;
-//    polygon.push_back(Point_2{0.0, 0.0});
-//    polygon.push_back(Point_2{-2.0, -1.0});
-//    polygon.push_back(Point_2{1.0, -1.0});
-//    polygon.push_back(Point_2{1.0, 2.0});
-
-
     create_zigzag(polygon,10000);
-//    std::cout << polygon << std::endl;
-    std::cout << "CREATED POLYGON" << std::endl;
-    CGAL::Convexity_measure_2<Kernel> conv_pol{polygon};
-    const long N = 1000000000000;
 
-    std::cout << "STARTING" << std::endl;
+    CGAL::Convexity_measure_2<Kernel> conv_pol{polygon};
+
     t1 = std::chrono::high_resolution_clock::now();
-    for(int i=1;i<=200;i++){
-        two_points = conv_pol.two_point_visibility_sample(N);
-    }
+    two_points = conv_pol.two_point_visibility_sample(N);
     t2 = std::chrono::high_resolution_clock::now();
     ms_double = t2 - t1;
-//    std::cout << "Two points prob for polygon: " << CGAL::to_double(two_points) << " in " << ms_double.count() << "ms" << std::endl;
-//
-//    t1 = std::chrono::high_resolution_clock::now();
-//    pol_vis = conv_pol.visibility_polygon_sample(N);
-//    t2 = std::chrono::high_resolution_clock::now();
-//    ms_double = t2 - t1;
-//    std::cout << "Polygon prob for polygon: " << CGAL::to_double(pol_vis) << " in " << ms_double.count() << "ms" << std::endl;
+    std::cout << "Two points prob for file: " << two_points << " in " << ms_double.count() << "ms" << std::endl;
 
-//    char dir[PATH_MAX];
-//    getcwd(dir, sizeof(dir));
-//    const std::string fileName{std::string(dir) + "/../50.line"};
-//
-//    Polygon_2 file_polygon;
-//    read_polygon(fileName, file_polygon);
-//    CGAL::Convexity_measure_2<Kernel> conv_path{file_polygon};
-//    const int M = 100000;
-//
-//    t1 = std::chrono::high_resolution_clock::now();
-//    two_points = conv_path.two_point_visibility_sample(M);
-//    t2 = std::chrono::high_resolution_clock::now();
-//    ms_double = t2 - t1;
-//    std::cout << "Two points prob for file: " << two_points << " in " << ms_double.count() << "ms" << std::endl;
-//
-//    t1 = std::chrono::high_resolution_clock::now();
-//    pol_vis = conv_path.visibility_polygon_sample(M);
-//    t2 = std::chrono::high_resolution_clock::now();
-//    ms_double = t2 - t1;
-//    std::cout << "Polygon prob for file: " << pol_vis << " in " << ms_double.count() << "ms" << std::endl;
+    t1 = std::chrono::high_resolution_clock::now();
+     pol_vis = conv_pol.visibility_polygon_sample(N);
+    t2 = std::chrono::high_resolution_clock::now();
+    ms_double = t2 - t1;
+    std::cout << "Polygon prob for file: " << pol_vis << " in " << ms_double.count() << "ms" << std::endl;
 
 
     return EXIT_SUCCESS;

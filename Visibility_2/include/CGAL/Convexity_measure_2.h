@@ -17,9 +17,6 @@
 #include <CGAL/Constrained_triangulation_plus_2.h>
 
 namespace CGAL {
-    const int LOWER_IT = 10;
-    const double MY_RESULT = 0.0001333266673;
-    const double MY_EPSILON = MY_RESULT / 100;
 
     struct FaceInfo2 {
         FaceInfo2() = default;
@@ -46,7 +43,6 @@ namespace CGAL {
             typedef typename Kernel::Segment_2 Segment_2;
 
             assert(n > 0);
-
             CGAL::Random_points_in_triangles_2<Point_2> point_generator{triangles};
 
             int sum = 0;
@@ -60,18 +56,6 @@ namespace CGAL {
                         break;
                     }
                 }
-
-                auto res = (1.0 - ((sum / static_cast<double>(i))));
-                auto diff = CGAL::abs(MY_RESULT - res);
-                if (i>= LOWER_IT && diff <= MY_EPSILON) {
-                    std::cout << i
-                              << std::endl;
-//                    std::cout << "Polygon converged after : " << i << " iterations at " << CGAL::to_double(diff) << " difference"
-//                              << std::endl;
-                    return res;
-                }
-
-
             }
             return 1.0 - ((sum / static_cast<typename Kernel::FT>(n)));
         }
@@ -115,25 +99,14 @@ namespace CGAL {
                                [](const auto &x) { return x.point(); });
 
                 //  Sum the area
+
                 sum += CGAL::polygon_area_2(visible_points.begin(), visible_points.end(), Kernel());
-
-                typename Kernel::FT res = sum / (CGAL::abs(polygon.area())*i);
-                auto diff = CGAL::abs(MY_RESULT - res);
-                if (i >= LOWER_IT && diff <= MY_EPSILON) {
-                    std::cout << i
-                              << std::endl;
-//                    std::cout << "Polygon converged after : " << i << " iterations at " << CGAL::to_double(diff) << " difference"
-//                              << std::endl;
-                    return res;
-                }
-
             }
             // Normalize to the size of the polygon
             return sum / (CGAL::abs(polygon.area()) * static_cast<typename Kernel::FT>(n));
         }
 
     private:
-
         typedef CGAL::Triangulation_vertex_base_2<Kernel> Vb;
         typedef CGAL::Triangulation_face_base_with_info_2<FaceInfo2, Kernel> Fbb;
         typedef CGAL::Constrained_triangulation_face_base_2<Kernel, Fbb> Fb;

@@ -19,10 +19,9 @@
 
 using namespace std;
 
+template<class K>
 class Convexity_measure_exact_2 final {
 public:
-    typedef CGAL::Simple_cartesian<double> K;
-
     typedef typename K::Point_2 Point_2;
     typedef typename K::Triangle_2 Triangle_2;
     typedef typename K::Segment_2 Segment_2;
@@ -34,7 +33,6 @@ public:
     typedef CGAL::Arrangement_2<Traits_2> Arrangement_2;
     typedef CGAL::Rotational_sweep_visibility_2<Arrangement_2> RSV;
 
-
     explicit Convexity_measure_exact_2(Polygon_2 &input_polygon) : polygon(input_polygon), tree() {
         triangulate();
         sweep_diagonals();
@@ -42,7 +40,7 @@ public:
 
     FT measure_convexity() {
         tree.SetRoot(triangles);
-        return decompose_tree_rec(tree.Root(), startingDiagonals);
+        return decompose_tree_rec(tree.Root(), startingDiagonals) / pow(polygon.area(), 2);
     }
 
 private:
@@ -65,7 +63,6 @@ private:
     typedef typename CGAL::Constrained_triangulation_2<K, TDS, Itag> CT;
     typedef CGAL::Constrained_triangulation_plus_2<CT> CTP;
     typedef typename CTP::Face_handle Face_handle;
-
 
     struct SegmentHash {
         size_t operator()(const Segment_2 &t) const {
@@ -94,7 +91,6 @@ private:
     };
 
     using DiagonalMap = std::unordered_map<Segment_2, Segment_2, SegmentHash>;
-
 
     Polygon_2 polygon;
     std::vector<Face_handle> triangles;
@@ -169,6 +165,7 @@ private:
         }
     }
 
+    // mark faces inside domain
     static void mark_domains(CTP &ctp) {
         for (Face_handle f: ctp.all_face_handles()) {
             f->info().nesting_level = -1;
@@ -185,6 +182,7 @@ private:
         }
     }
 
+    // triangulate polygon and prepare faces
     void triangulate() {
         triangulation.insert_constraint(polygon.vertices_begin(), polygon.vertices_end(), true);
         mark_domains(triangulation);
@@ -198,11 +196,6 @@ private:
                 triangles.emplace_back(face);
             }
         }
-
-//        std::cout << "TRIANGULATION" << std::endl;
-//        for (auto a: triangles) {
-//            std::cout << triangulation.triangle(a) << a->info().id << std::endl;
-//        }
     }
 
     // find the closest intersecting segment in p1/p2
@@ -295,15 +288,14 @@ private:
         int res;
         for (const auto &rightFace: rightNode->data) {
             if (leftFace->has_neighbor(rightFace, res)) {
-                auto s =  triangulation.segment(typename CTP::Edge{leftFace, res});
+                auto s = triangulation.segment(typename CTP::Edge{leftFace, res});
 
-                if (s.is_horizontal() && s.direction().dx() > 1){
+                if (s.is_horizontal() && s.direction().dx() > 1) {
                     return s;
 
-                }else if(s.is_vertical() && s.direction().dy()>0){
+                } else if (s.is_vertical() && s.direction().dy() > 0) {
                     return s.opposite();
-                }
-                else
+                } else
                     return s.direction() < s.opposite().direction() ? s : s.opposite();
 
 
@@ -335,7 +327,6 @@ private:
         }
 
         for (const auto &diag: diagonals) {
-            cout << diag.first << endl;
             if ((leftPoints.count(diag.first.source()) == 1 && rightPoints.count(diag.first.target()) == 1) ||
                 (rightPoints.count(diag.first.source()) == 1 && leftPoints.count(diag.first.target())) == 1) {
                 crossingDiagonals[diag.first] = diag.second;
@@ -346,7 +337,6 @@ private:
                 rightDiagonals[diag.first] = diag.second;
             }
         }
-        cout << "LEFT" << endl;
         // update eta edges for left subset
         for (auto &s: leftDiagonals) {
             if (!is_edge_in_faces(leftNode->data, diagonals[s.first]))
@@ -361,6 +351,7 @@ private:
 
         return make_tuple(leftDiagonals, crossingDiagonals, rightDiagonals);
     }
+
 
     std::vector<Segment_2> sort_diagonals(const DiagonalMap &diagMap, const Segment_2 &splittingDiagonal) {
         std::vector<Segment_2> crossingDiagonals;
@@ -391,8 +382,6 @@ private:
         return crossingDiagonals;
     }
 
-
-
     // handles the event list
     FT create_event_list(typename BinaryTree<CTP>::Node *leftNode, typename BinaryTree<CTP>::Node *rightNode,
                          DiagonalMap &diagMap, const Segment_2 &splittingDiagonal) {
@@ -402,7 +391,6 @@ private:
                 splittingDiagonal.direction().dy() / splittingDiagonal.direction().dx());
         typename K::Aff_transformation_2 rotate(CGAL::ROTATION, sin(-t), cos(-t));
 
-        cout << "SPLIT: " << splittingDiagonal.source() << splittingDiagonal.target() << endl;
         FT final_res = 0;
         auto eventList = std::list<Corner>();
 
@@ -410,30 +398,16 @@ private:
         auto b = crossingDiagonals[1];
         crossingDiagonals.erase(crossingDiagonals.begin(), next(crossingDiagonals.begin(), 2));
 
-//        if (f.target().x() > b.target().x()) {
-//            std::swap(f, b);
-//        }
-
-        std::unordered_set<Point_2,PointHashFunction> leftVertices;
-        std::for_each(leftNode->data.begin(), leftNode->data.end(),[&leftVertices](const Face_handle& A){
+        std::unordered_set<Point_2, PointHashFunction> leftVertices;
+        std::for_each(leftNode->data.begin(), leftNode->data.end(), [&leftVertices](const Face_handle &A) {
             for (int i = 0; i < 3; ++i) {
                 leftVertices.insert(A->vertex(i)->point());
-            }});
-
-
-
-
+            }
+        });
 
         eventList.push_front({splittingDiagonal.source(), diagMap[f], diagMap[b], f.direction()});
         eventList.push_back({splittingDiagonal.target(), diagMap[f], diagMap[b], f.direction()});
 
-
-
-
-
-
-
-        
         auto lastPlaced = eventList.begin();
 
         for (auto crossingDiagonal = crossingDiagonals.begin();
@@ -443,8 +417,6 @@ private:
             if (rotate(crossingDiagonal->direction()) >= rotate(crossingDiagonal->opposite().direction())) {
                 continue;
             }
-            cout << crossingDiagonal->direction() << crossingDiagonal->opposite().direction() << endl;
-            cout << rotate(crossingDiagonal->direction()) << rotate(crossingDiagonal->direction()) << endl;
 
             Corner newCorner = {crossingDiagonal->target(), diagMap[*crossingDiagonal],
                                 diagMap[crossingDiagonal->opposite()].opposite(),
@@ -452,22 +424,12 @@ private:
             auto target_in_list = find(eventList.begin(), eventList.end(), newCorner);
             auto source_in_list = find(eventList.begin(), eventList.end(), Corner{crossingDiagonal->source()});
 
-            cout << "DIAGONAL: " << *crossingDiagonal << endl;
-            cout << "EVENTS" << endl;
-            for (auto a: eventList) {
-                cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
-            }
-            cout << endl;
             // on top
             if (target_in_list == eventList.end()) {
-                cout << "APPEARANCE TOP: " << crossingDiagonal->target() << endl;
-                cout << "SOURCE: " << (source_in_list)->target << endl;
-                cout << "NEXT SOURCE: " << next(source_in_list)->target << endl;
 
                 final_res += calc(*(source_in_list), *next(source_in_list), newCorner.direction, splittingDiagonal);
                 lastPlaced = (eventList.insert(next(source_in_list), newCorner));
 
-//                    source_in_list->direction = newCorner.direction;
                 next(source_in_list, 2)->direction = newCorner.direction;
                 source_in_list->top = newCorner.top;
                 source_in_list->bot = newCorner.bot;
@@ -475,16 +437,7 @@ private:
 
                 // on bot
             } else if (source_in_list == eventList.end()) {
-                cout << "APPEARANCE BOT: " << crossingDiagonal->source() << crossingDiagonal->direction() << endl;
-                cout << "TARGET: " << target_in_list->target << endl;
-                if(target_in_list==eventList.begin())
-                    target_in_list = next(eventList.begin(),1);
-
-                    cout << prev(target_in_list)->target << endl;
                 newCorner.target = crossingDiagonal->source();
-
-
-
 
                 final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction, splittingDiagonal);
                 lastPlaced = (eventList.insert((target_in_list), newCorner));
@@ -503,16 +456,11 @@ private:
                                }) == crossingDiagonals.end() &&
                        crossingDiagonal->target() != splittingDiagonal.target() &&
                        crossingDiagonal->target() != splittingDiagonal.source()) {
-                cout << "DISAPPEARANCE TOP: " << target_in_list->target << endl;
-                cout << "NEXT: " << next(target_in_list)->target << endl;
-                cout << newCorner.direction << endl;
-
 
                 final_res += calc(*prev(target_in_list), *(target_in_list), newCorner.direction, splittingDiagonal);
                 final_res += calc(*(target_in_list), *next(target_in_list, 1), newCorner.direction,
                                   splittingDiagonal);
 
-//                    prev(target_in_list)-> direction = newCorner.direction; //maybe
                 next(target_in_list)->direction = newCorner.direction;
                 next(target_in_list)->top = prev(target_in_list)->top;
 
@@ -528,10 +476,6 @@ private:
                                }) == crossingDiagonals.end() &&
                        crossingDiagonal->source() != splittingDiagonal.target() &&
                        crossingDiagonal->source() != splittingDiagonal.source()) {
-                cout << "DISAPPEARANCE BOT: " << source_in_list->target << endl;
-                cout << prev(source_in_list)->target << endl;
-                cout << newCorner.direction << endl;
-
 
                 final_res += calc(*prev(source_in_list), *(source_in_list), newCorner.direction, splittingDiagonal);
                 final_res += calc(*(source_in_list), *next(source_in_list, 1), newCorner.direction,
@@ -543,10 +487,7 @@ private:
 
                 eventList.erase(source_in_list);
             } else {
-                cout << "SWAP: " << source_in_list->target << "<->" << target_in_list->target << endl;
-
                 auto last = next(source_in_list) == target_in_list ? target_in_list : source_in_list;
-                cout << "LAST: " << last->target << endl;
 
                 final_res += calc(*prev(last, 2), *prev(last), newCorner.direction, splittingDiagonal);
                 final_res += calc(*prev(last), *(last), newCorner.direction, splittingDiagonal);
@@ -563,15 +504,8 @@ private:
                 iter_swap(target_in_list, source_in_list);
             }
         }
-        cout << "END: " << endl;
-
-        for (auto a: eventList) {
-            cout << a.target << " : " << a.top << " : " << a.bot << " : " << a.direction << endl;
-        }
-        cout << f.direction() << endl;
 
         final_res += calc(*(eventList.begin()), *prev(eventList.end()), b.direction(), splittingDiagonal);
-        cout << "Sweep: " << final_res << endl;
         return final_res;
     }
 
@@ -603,49 +537,16 @@ private:
         BOT1 = trans(BOT1);
 
 
-        K::FT PLX = PL.x();
-        K::FT PLY = PL.y();
-        K::FT PRX = PR.x();
-        K::FT PRY = PR.y();
-
-        K::FT TOP0X = TOP0.x();
-        K::FT TOP0Y = TOP0.y();
-        K::FT TOP1X = TOP1.x();
-        K::FT TOP1Y = TOP1.y();
-
-        K::FT BOT0X = BOT0.x();
-        K::FT BOT0Y = BOT0.y();
-        K::FT BOT1X = BOT1.x();
-        K::FT BOT1Y = BOT1.y();
-
-
-        K::FT V0X = V0.dx();
-        K::FT V0Y = V0.dy();
-        K::FT V1X = V1.dx();
-        K::FT V1Y = V1.dy();
-
-
-        cout << "TOP0: " << "(" << TOP0X << "," << TOP0Y << ")" << endl;
-        cout << "TOP1: " << "(" << TOP1X << "," << TOP1Y << ")" << endl;
-        cout << "BOT0: " << "(" << BOT0X << "," << BOT0Y << ")" << endl;
-        cout << "BOT1: " << "(" << BOT1X << "," << BOT1Y << ")" << endl;
-        cout << "PL: " << "(" << PLX << "," << PLY << ")" << endl;
-        cout << "PR: " << "(" << PRX << "," << PRY << ")" << endl;
-        cout << "V0: " << "(" << V0X << "," << V0Y << ")" << endl;
-        cout << "V1: " << "(" << V1X << "," << V1Y << ")" << endl;
-
-
         auto res = 2 * Integral<FT>::ComputeOpt(TOP0.x(), TOP0.y(), TOP1.x(), TOP1.y(),
                                                 BOT0.x(), BOT0.y(), BOT1.x(), BOT1.y(),
                                                 0, PL.y(), PR.x(), PR.y(),
                                                 V0.dx(), V0.dy(), V1.dx(), V1.dy(),
                                                 0.0, 1.0);
-        cout << "INTERMEDIATE: " << res << endl;
 
         return res;
     }
 
-
+    // recurse on node
     FT decompose_tree_rec(typename BinaryTree<CTP>::Node *node, const DiagonalMap &diagonals) {
         auto leftNode = tree.EmptyNode();
         auto rightNode = tree.EmptyNode();
