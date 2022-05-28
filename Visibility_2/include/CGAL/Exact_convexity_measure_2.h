@@ -101,8 +101,8 @@ private:
 
     // check if 2 faces are equal
     static bool face_equality(const Face_handle &A, const Face_handle &B) {
-        std::unordered_set<typename CTP::Point, PointHashFunction> s{A->vertex(0)->point(), A->vertex(1)->point(),
-                                                                     A->vertex(2)->point()};
+        std::unordered_set<typename CTP::Point, PointHashFunction>
+                s{A->vertex(0)->point(), A->vertex(1)->point(),A->vertex(2)->point()};
         for (int i = 0; i < 3; i++) {
             if (s.count(B->vertex(i)->point()) == 0)
                 return false;
